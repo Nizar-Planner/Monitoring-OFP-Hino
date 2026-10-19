@@ -1,0 +1,6 @@
+{
+  "name": "Hino OPF Monitoring & Tracking Dashboard",
+  "description": "Dashboard monitoring dan tracking Original Part Failure (OPF) Hino Motors untuk memantau alur klaim Dealer -> HMSI -> HMMI/HML secara otomatis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: hino-opf-monitoring
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: PUPPETEER_EXECUTABLE_PATH
+        value: /usr/bin/chromium
+      - key: SYNC_INTERVAL_HOURS
+        value: 3
+      - key: HIS_URL
+        value: https://his.hino.co.id/portal
+      - key: HIS_USER
+        sync: false
+      - key: HIS_PASSWORD
+        sync: false
