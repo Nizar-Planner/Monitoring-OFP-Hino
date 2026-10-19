@@ -45,13 +45,13 @@ const upload = multer({
 app.get('/api/health', (_req, res) => {
   res.json({
     status: 'online',
-    app: 'Hino OPF Monitoring & Tracking Dashboard (HMSI -> HMMI/HML)',
+    app: 'Hino OFP Monitoring & Tracking Dashboard (HMSI -> HMMI/HML)',
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
   });
 });
 
-// 2. Get OPF Records with search & status filters
+// 2. Get OFP Records with search & status filters
 app.get('/api/opf', async (req, res) => {
   try {
     const search = typeof req.query.search === 'string' ? req.query.search : '';
@@ -61,12 +61,12 @@ app.get('/api/opf', async (req, res) => {
     const records = await getAllOpfRecords(search, status, overdueOnly);
     res.json({ success: true, data: records, count: records.length });
   } catch (error) {
-    console.error('Error fetching OPF records:', error);
-    res.status(500).json({ success: false, error: 'Gagal mengambil data OPF.' });
+    console.error('Error fetching OFP records:', error);
+    res.status(500).json({ success: false, error: 'Gagal mengambil data OFP.' });
   }
 });
 
-// 3. Get single OPF record by ID
+// 3. Get single OFP record by ID
 app.get('/api/opf/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
@@ -76,7 +76,7 @@ app.get('/api/opf/:id', async (req, res) => {
     }
     res.json({ success: true, data: record });
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Gagal memuat rincian OPF.' });
+    res.status(500).json({ success: false, error: 'Gagal memuat rincian OFP.' });
   }
 });
 
@@ -109,7 +109,7 @@ app.get('/api/download-template', (_req, res) => {
   try {
     const buffer = generateExcelTemplate();
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="Template_Monitoring_OPF_HMSI.xlsx"');
+    res.setHeader('Content-Disposition', 'attachment; filename="Template_Monitoring_OFP_HMSI.xlsx"');
     res.send(buffer);
   } catch (error) {
     console.error('Error generating template:', error);
@@ -137,7 +137,7 @@ app.put('/api/opf/:id/area-receipt', async (req, res) => {
     const updated = await getOpfById(id);
     res.json({
       success: true,
-      message: 'Part OPF berhasil dikonfirmasi diterima di HMSI oleh Tim Area. Notifikasi diteruskan ke Tim Quality.',
+      message: 'Part OFP berhasil dikonfirmasi diterima di HMSI oleh Tim Area. Notifikasi diteruskan ke Tim Quality.',
       data: updated,
     });
   } catch (error: any) {
@@ -194,7 +194,7 @@ app.put('/api/opf/:id/ship-hmmi', async (req, res) => {
     const updated = await getOpfById(id);
     res.json({
       success: true,
-      message: 'Status berhasil diperbarui: Part OPF telah dikirimkan ke HMMI / HML (Delivered).',
+      message: 'Status berhasil diperbarui: Part OFP telah dikirimkan ke HMMI / HML (Delivered).',
       data: updated,
     });
   } catch (error: any) {
@@ -218,16 +218,16 @@ app.post('/api/opf', async (req, res) => {
     res.json({
       success: true,
       isNew: result.isNew,
-      message: result.isNew ? 'Data OPF baru berhasil ditambahkan.' : 'Data OPF berhasil diperbarui.',
+      message: result.isNew ? 'Data OFP baru berhasil ditambahkan.' : 'Data OFP berhasil diperbarui.',
       id: result.id,
     });
   } catch (error) {
-    console.error('Error saving OPF record:', error);
-    res.status(500).json({ success: false, error: 'Gagal menyimpan data OPF.' });
+    console.error('Error saving OFP record:', error);
+    res.status(500).json({ success: false, error: 'Gagal menyimpan data OFP.' });
   }
 });
 
-// 10. Delete OPF Record
+// 10. Delete OFP Record
 app.delete('/api/opf/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
@@ -235,10 +235,10 @@ app.delete('/api/opf/:id', async (req, res) => {
       return res.status(400).json({ success: false, error: 'ID tidak valid.' });
     }
     await deleteOpfRecord(id);
-    res.json({ success: true, message: 'Data OPF berhasil dihapus.' });
+    res.json({ success: true, message: 'Data OFP berhasil dihapus.' });
   } catch (error) {
-    console.error('Error deleting OPF record:', error);
-    res.status(500).json({ success: false, error: 'Gagal menghapus data OPF.' });
+    console.error('Error deleting OFP record:', error);
+    res.status(500).json({ success: false, error: 'Gagal menghapus data OFP.' });
   }
 });
 
@@ -259,17 +259,19 @@ app.get('/api/export/csv', async (_req, res) => {
     const records = await getAllOpfRecords();
     const headers = [
       'ID',
-      'Nomor DTR',
-      'Part Name',
+      'TR_No',
+      'Part',
+      'Part Number',
       'Quantity',
-      'Model',
-      'No. Chassis',
-      'No. Engine',
+      'Model_Unit',
+      'Chassis',
+      'Engine_No',
       'Mileage (km)',
-      'Dealer',
-      'Nomor QPI',
-      'Judgement QPI',
-      'Tanggal DTR',
+      'DLR',
+      'QPI Number',
+      'Judgment',
+      'Judgement Date',
+      'Tanggal Request',
       'Status Alur',
       'Hari Berjalan',
       'Overdue > 30 Hari',
@@ -295,6 +297,7 @@ app.get('/api/export/csv', async (_req, res) => {
         r.id,
         escapeCsv(r.dtr_number),
         escapeCsv(r.part_name),
+        escapeCsv(r.part_number || ''),
         r.quantity,
         escapeCsv(r.model),
         escapeCsv(r.chassis_number),
@@ -303,6 +306,7 @@ app.get('/api/export/csv', async (_req, res) => {
         escapeCsv(r.dealer_name),
         escapeCsv(r.qpi_number),
         escapeCsv(r.judgement_qpi),
+        escapeCsv(r.judgement_date || ''),
         escapeCsv(r.request_date),
         escapeCsv(r.tracking_status),
         r.days_elapsed,
@@ -321,7 +325,7 @@ app.get('/api/export/csv', async (_req, res) => {
 
     const csvContent = csvRows.join('\r\n');
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="hino_opf_monitoring_hmsi_${new Date().toISOString().split('T')[0]}.csv"`);
+    res.setHeader('Content-Disposition', `attachment; filename="hino_ofp_monitoring_hmsi_${new Date().toISOString().split('T')[0]}.csv"`);
     res.send(csvContent);
   } catch (error) {
     console.error('Error exporting CSV:', error);
@@ -367,7 +371,7 @@ async function startServer() {
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`=============================================================`);
-    console.log(`🚚 Hino OPF Tracker (HMSI -> HMMI/HML) aktif di http://0.0.0.0:${PORT}`);
+    console.log(`🚚 Hino OFP Tracker (HMSI -> HMMI/HML) aktif di http://0.0.0.0:${PORT}`);
     console.log(`=============================================================`);
   });
 }

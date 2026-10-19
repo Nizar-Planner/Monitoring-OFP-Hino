@@ -50,7 +50,7 @@ export const WorkflowTrackerCards: React.FC<WorkflowTrackerCardsProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-sm sm:text-base tracking-tight">
-                  PERINGATAN KRITIS: {overdueCount} KLAIM OPF MELEBIHI 30 HARI!
+                  PERINGATAN KRITIS: {overdueCount} KLAIM OFP MELEBIHI 30 HARI!
                 </span>
                 <span className="bg-white text-red-700 font-black text-[11px] px-2 py-0.5 rounded uppercase">
                   Batas Supplier

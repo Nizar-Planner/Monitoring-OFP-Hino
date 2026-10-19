@@ -70,7 +70,7 @@ export default function App() {
       }).then((r) => r.json());
 
       if (res.success) {
-        showToast(res.message || 'Data OPF berhasil disimpan.', 'success');
+        showToast(res.message || 'Data OFP berhasil disimpan.', 'success');
         await fetchData();
       } else {
         showToast(res.error || 'Gagal menyimpan data.', 'error');
@@ -86,7 +86,7 @@ export default function App() {
     try {
       const res = await fetch(`/api/opf/${id}`, { method: 'DELETE' }).then((r) => r.json());
       if (res.success) {
-        showToast('Data klaim OPF berhasil dihapus.', 'success');
+        showToast('Data klaim OFP berhasil dihapus.', 'success');
         await fetchData();
         if (selectedRecord?.id === id) setSelectedRecord(null);
         if (actionRecord?.id === id) setActionRecord(null);
@@ -169,8 +169,8 @@ export default function App() {
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
                 Sistem Monitoring &amp; Tracking Part OFP (Dealer &rarr; HMSI &rarr; HMMI/HML)
               </h1>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Mencegah penolakan klaim garansi oleh supplier pabrik akibat <strong>Lead Time &gt; 30 Hari (&ldquo;OFP Not Return&rdquo;)</strong>. Memfasilitasi serah terima fisik part di transit HMSI oleh <strong>Tim Area</strong> dan verifikasi teknis oleh <strong>Tim Quality</strong> lengkap dengan bukti foto digital.
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
+                Harap diperhatikan terkait lead Time OFP &gt; 30 Hari Agar tidak mendapatkan judgement QPI menjadi (OFP Not Return)!
               </p>
             </div>
 
@@ -271,7 +271,7 @@ export default function App() {
               H
             </span>
             <span className="font-semibold text-slate-800">
-              Hino Motors Sales Indonesia (HMSI) · OPF SLA Monitoring System
+              Hino Motors Sales Indonesia (HMSI) · OFP SLA Monitoring System
             </span>
             <span>·</span>
             <span>SQLite Database</span>

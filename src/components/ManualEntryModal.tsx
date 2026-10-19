@@ -15,8 +15,9 @@ export const ManualEntryModal: React.FC<ManualEntryModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const [dtrNumber, setDtrNumber] = useState(`DTR-2026-JKT-${Math.floor(1000 + Math.random() * 9000)}`);
+  const [dtrNumber, setDtrNumber] = useState(`TR-2026-JKT-${Math.floor(1000 + Math.random() * 9000)}`);
   const [partName, setPartName] = useState('Turbocharger Assembly');
+  const [partNumber, setPartNumber] = useState('24100-33120');
   const [quantity, setQuantity] = useState(1);
   const [model, setModel] = useState('Hino 500 FM 260 JD (6x4 Dump)');
   const [chassisNumber, setChassisNumber] = useState('MHFJ1JGBMK00' + Math.floor(1000 + Math.random() * 9000));
@@ -25,6 +26,7 @@ export const ManualEntryModal: React.FC<ManualEntryModalProps> = ({
   const [dealerName, setDealerName] = useState('PT Duta Cemerlang Motors - Jakarta Barat');
   const [qpiNumber, setQpiNumber] = useState('QPI-HMSI-26-' + Math.floor(100 + Math.random() * 900));
   const [judgementQpi, setJudgementQpi] = useState('Under Technical Review');
+  const [judgementDate, setJudgementDate] = useState(new Date().toISOString().split('T')[0]);
   const [requestDate, setRequestDate] = useState(new Date().toISOString().split('T')[0]);
   const [trackingStatus, setTrackingStatus] = useState<'Waiting OFP' | 'Not yet shipped' | 'Delivered'>('Waiting OFP');
   const [areaNotes, setAreaNotes] = useState('');
@@ -34,7 +36,7 @@ export const ManualEntryModal: React.FC<ManualEntryModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!dtrNumber.trim() || !partName.trim() || !chassisNumber.trim()) {
-      alert('Nomor DTR, Part Name, dan No. Chassis wajib diisi.');
+      alert('TR_No, Part, dan Chassis wajib diisi.');
       return;
     }
 
@@ -43,6 +45,7 @@ export const ManualEntryModal: React.FC<ManualEntryModalProps> = ({
       await onSubmit({
         dtr_number: dtrNumber,
         part_name: partName,
+        part_number: partNumber,
         quantity: Number(quantity) || 1,
         model,
         chassis_number: chassisNumber,
@@ -51,6 +54,7 @@ export const ManualEntryModal: React.FC<ManualEntryModalProps> = ({
         dealer_name: dealerName,
         qpi_number: qpiNumber,
         judgement_qpi: judgementQpi,
+        judgement_date: judgementDate,
         request_date: requestDate,
         tracking_status: trackingStatus,
         area_notes: areaNotes,
@@ -70,7 +74,7 @@ export const ManualEntryModal: React.FC<ManualEntryModalProps> = ({
         <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-2">
             <PlusCircle className="w-5 h-5 text-red-500" />
-            <h3 className="font-bold text-sm sm:text-base">Input Data DTR &amp; Part OPF Baru</h3>
+            <h3 className="font-bold text-sm sm:text-base">Input Data DTR &amp; Part OFP Baru</h3>
           </div>
           <button
             onClick={onClose}
@@ -84,38 +88,54 @@ export const ManualEntryModal: React.FC<ManualEntryModalProps> = ({
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 text-xs sm:text-sm">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             
-            {/* Nomor DTR */}
+            {/* TR_No */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Nomor DTR <span className="text-red-500">*</span>
+                TR_No (Nomor TR) <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={dtrNumber}
                 onChange={(e) => setDtrNumber(e.target.value)}
+                placeholder="TR-2026-..."
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-mono text-xs focus:ring-1 focus:ring-red-500 focus:outline-none"
               />
             </div>
 
-            {/* Part Name */}
+            {/* Part */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Part Name (Nama Komponen) <span className="text-red-500">*</span>
+                Part (Nama Komponen) <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={partName}
                 onChange={(e) => setPartName(e.target.value)}
+                placeholder="Turbocharger Assembly..."
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-red-500 focus:outline-none"
+              />
+            </div>
+
+            {/* Part Number */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Part Number (Nomor Part)
+              </label>
+              <input
+                type="text"
+                value={partNumber}
+                onChange={(e) => setPartNumber(e.target.value)}
+                placeholder="24100-33120..."
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-mono text-xs focus:ring-1 focus:ring-red-500 focus:outline-none"
               />
             </div>
 
             {/* Quantity */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Quantity (Jumlah Part)
+                Quantity (Qty)
               </label>
               <input
                 type="number"
@@ -126,42 +146,45 @@ export const ManualEntryModal: React.FC<ManualEntryModalProps> = ({
               />
             </div>
 
-            {/* Model Kendaraan */}
+            {/* Model_Unit */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Model Kendaraan
+                Model_Unit
               </label>
               <input
                 type="text"
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
+                placeholder="Hino 500 FM 260 JD..."
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-red-500 focus:outline-none"
               />
             </div>
 
-            {/* Chassis Number */}
+            {/* Chassis */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                No. Chassis (Ch) <span className="text-red-500">*</span>
+                Chassis <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={chassisNumber}
                 onChange={(e) => setChassisNumber(e.target.value)}
+                placeholder="MHFJ1JGBMK..."
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-mono text-xs focus:ring-1 focus:ring-red-500 focus:outline-none"
               />
             </div>
 
-            {/* Engine Number */}
+            {/* Engine_No */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                No. Engine (EG)
+                Engine_No
               </label>
               <input
                 type="text"
                 value={engineNumber}
                 onChange={(e) => setEngineNumber(e.target.value)}
+                placeholder="J08E-WD..."
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-mono text-xs focus:ring-1 focus:ring-red-500 focus:outline-none"
               />
             </div>
@@ -169,7 +192,7 @@ export const ManualEntryModal: React.FC<ManualEntryModalProps> = ({
             {/* Mileage */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Mileage / Odometer (km)
+                Mileage (km)
               </label>
               <input
                 type="number"
@@ -179,54 +202,70 @@ export const ManualEntryModal: React.FC<ManualEntryModalProps> = ({
               />
             </div>
 
-            {/* Tanggal Request DTR */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Tanggal DTR / Permintaan Part
-              </label>
-              <input
-                type="date"
-                value={requestDate}
-                onChange={(e) => setRequestDate(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-red-500 focus:outline-none"
-              />
-            </div>
-
-            {/* Dealer */}
+            {/* DLR */}
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Dealer Asal Part
+                DLR (Dealer)
               </label>
               <input
                 type="text"
                 value={dealerName}
                 onChange={(e) => setDealerName(e.target.value)}
+                placeholder="PT Indomobil Prima Niaga / Duta Cemerlang Motors..."
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-red-500 focus:outline-none"
               />
             </div>
 
-            {/* Nomor QPI */}
+            {/* QPI Number */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Nomor QPI
+                QPI Number
               </label>
               <input
                 type="text"
                 value={qpiNumber}
                 onChange={(e) => setQpiNumber(e.target.value)}
+                placeholder="QPI-HMSI-26-..."
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-mono text-xs focus:ring-1 focus:ring-red-500 focus:outline-none"
               />
             </div>
 
-            {/* Judgement QPI */}
+            {/* Judgment */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Judgement QPI
+                Judgment
               </label>
               <input
                 type="text"
                 value={judgementQpi}
                 onChange={(e) => setJudgementQpi(e.target.value)}
+                placeholder="Under Investigation / Approved..."
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-red-500 focus:outline-none"
+              />
+            </div>
+
+            {/* Judgement Date */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Judgement Date
+              </label>
+              <input
+                type="date"
+                value={judgementDate}
+                onChange={(e) => setJudgementDate(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-red-500 focus:outline-none"
+              />
+            </div>
+
+            {/* Tanggal Request / DTR */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Tanggal DTR / Request Date
+              </label>
+              <input
+                type="date"
+                value={requestDate}
+                onChange={(e) => setRequestDate(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-red-500 focus:outline-none"
               />
             </div>

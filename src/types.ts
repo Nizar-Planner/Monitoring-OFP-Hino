@@ -2,16 +2,18 @@ export type TrackingStatus = 'Waiting OFP' | 'Not yet shipped' | 'Delivered';
 
 export interface OpfRecord {
   id?: number;
-  dtr_number: string;
-  part_name: string;
+  dtr_number: string; // TR_No / Nomor DTR
+  part_name: string; // Part
+  part_number?: string; // Part Number
   quantity: number;
-  model: string;
-  chassis_number: string;
-  engine_number: string;
-  mileage: number;
-  dealer_name: string;
-  qpi_number: string;
-  judgement_qpi: string;
+  model: string; // Model_Unit
+  chassis_number: string; // Chassis
+  engine_number: string; // Engine_No
+  mileage: number; // Mileage
+  dealer_name: string; // DLR
+  qpi_number: string; // QPI Number
+  judgement_qpi: string; // Judgment
+  judgement_date?: string | null; // Judgement Date
   request_date: string; // YYYY-MM-DD (DTR created / part requested)
   tracking_status: TrackingStatus;
   

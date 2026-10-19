@@ -71,40 +71,78 @@ export async function parseAndImportExcel(buffer: Buffer): Promise<ExcelImportRe
       rowMap[normalizeKey(k)] = v;
     }
 
-    const dtrNumber = String(
-      rowMap['nomordtr'] || rowMap['nodtr'] || rowMap['dtr'] || rowMap['dtrnumber'] || ''
+    // 1. TR_No
+    const trNo = String(
+      rowMap['trno'] || rowMap['tr_no'] || rowMap['trnumber'] || rowMap['nomortr'] || rowMap['notr'] || rowMap['nomordtr'] || rowMap['nodtr'] || rowMap['dtr'] || rowMap['dtrnumber'] || ''
     ).trim();
 
-    const partName = String(
-      rowMap['partname'] || rowMap['namapart'] || rowMap['namasparepart'] || rowMap['part'] || ''
+    // 2. Part
+    const part = String(
+      rowMap['part'] || rowMap['partname'] || rowMap['namapart'] || rowMap['namasparepart'] || ''
     ).trim();
 
-    if (!dtrNumber && !partName) {
+    // 3. Part Number
+    const partNumber = String(
+      rowMap['partnumber'] || rowMap['partno'] || rowMap['nopart'] || rowMap['nomorpart'] || rowMap['part_number'] || ''
+    ).trim();
+
+    // 4. Model_Unit
+    const modelUnit = String(
+      rowMap['modelunit'] || rowMap['model_unit'] || rowMap['model'] || rowMap['modelkendaraan'] || rowMap['tipe'] || 'Hino 500'
+    ).trim();
+
+    // 5. Chassis
+    const chassis = String(
+      rowMap['chassis'] || rowMap['nochassis'] || rowMap['norangka'] || rowMap['vin'] || ''
+    ).trim();
+
+    // 6. Engine_No
+    const engineNo = String(
+      rowMap['engineno'] || rowMap['engine_no'] || rowMap['noengine'] || rowMap['engine'] || rowMap['nomesin'] || rowMap['eg'] || ''
+    ).trim();
+
+    // 7. Mileage
+    const mileage = parseInt(String(rowMap['mileage'] || rowMap['km'] || rowMap['odometer'] || '0').replace(/\D/g, ''), 10) || 0;
+
+    // 8. DLR
+    const dlr = String(
+      rowMap['dlr'] || rowMap['dealer'] || rowMap['namadealer'] || rowMap['dealername'] || rowMap['bengkel'] || 'Dealer Hino'
+    ).trim();
+
+    // 9. QPI Number
+    const qpiNumber = String(
+      rowMap['qpinumber'] || rowMap['nomorqpi'] || rowMap['noqpi'] || rowMap['qpi'] || ''
+    ).trim();
+
+    // 10. Judgment
+    const judgment = String(
+      rowMap['judgment'] || rowMap['judgement'] || rowMap['judgementqpi'] || rowMap['judgmentqpi'] || rowMap['putusanqpi'] || rowMap['statusqpi'] || 'Pending Inspection'
+    ).trim();
+
+    // 11. Judgement Date
+    const rawJudgementDate = rowMap['judgementdate'] || rowMap['judgmentdate'] || rowMap['tanggaljudgement'] || rowMap['tanggaljudgment'] || rowMap['tgljudgement'] || rowMap['tgljudgment'] || '';
+    const judgementDate = rawJudgementDate ? parseExcelDate(rawJudgementDate) : null;
+
+    if (!trNo && !part && !partNumber) {
       continue; // skip empty rows
     }
 
-    if (!dtrNumber) {
-      errors.push(`Baris ${rowNum}: Nomor DTR kosong.`);
+    if (!trNo) {
+      errors.push(`Baris ${rowNum}: Kolom TR_No kosong.`);
       continue;
     }
 
-    if (!partName) {
-      errors.push(`Baris ${rowNum} (${dtrNumber}): Part Name kosong.`);
+    if (!part && !partNumber) {
+      errors.push(`Baris ${rowNum} (${trNo}): Kolom Part / Part Number kosong.`);
       continue;
     }
 
+    const effectivePartName = part || partNumber;
     const quantity = Math.max(1, parseInt(String(rowMap['quantity'] || rowMap['qty'] || rowMap['jumlah'] || '1'), 10) || 1);
-    const model = String(rowMap['model'] || rowMap['modelkendaraan'] || rowMap['modelunit'] || rowMap['tipe'] || 'Hino 500').trim();
-    const chassis = String(rowMap['nochassis'] || rowMap['chassis'] || rowMap['norangka'] || rowMap['vin'] || '').trim();
-    const engine = String(rowMap['noengine'] || rowMap['engine'] || rowMap['nomesin'] || rowMap['eg'] || '').trim();
-    const mileage = parseInt(String(rowMap['mileage'] || rowMap['km'] || rowMap['odometer'] || '0').replace(/\D/g, ''), 10) || 0;
-    const dealer = String(rowMap['dealer'] || rowMap['namadealer'] || rowMap['dealername'] || rowMap['bengkel'] || 'Dealer Hino').trim();
-    const qpiNumber = String(rowMap['nomorqpi'] || rowMap['noqpi'] || rowMap['qpi'] || rowMap['qpinumber'] || '').trim();
-    const judgementQpi = String(rowMap['judgementqpi'] || rowMap['judgement'] || rowMap['putusanqpi'] || rowMap['statusqpi'] || 'Pending Inspection').trim();
-    
-    // Request date: when DTR was issued
-    const rawDate = rowMap['requestdate'] || rowMap['tanggaldtr'] || rowMap['tanggalrequest'] || rowMap['tanggal'] || rowMap['date'] || '';
-    const requestDate = parseExcelDate(rawDate);
+
+    // Request date: prefer explicit request date, otherwise use Judgement Date or today
+    const rawRequestDate = rowMap['requestdate'] || rowMap['tanggaldtr'] || rowMap['tanggalrequest'] || rowMap['tanggal'] || rowMap['date'] || '';
+    const requestDate = rawRequestDate ? parseExcelDate(rawRequestDate) : (judgementDate || new Date().toISOString().split('T')[0]);
 
     // Initial status determination from Excel if present, otherwise 'Waiting OFP'
     let trackingStatus: 'Waiting OFP' | 'Not yet shipped' | 'Delivered' = 'Waiting OFP';
@@ -116,16 +154,18 @@ export async function parseAndImportExcel(buffer: Buffer): Promise<ExcelImportRe
     }
 
     const record: OpfRecord = {
-      dtr_number: dtrNumber,
-      part_name: partName,
+      dtr_number: trNo,
+      part_name: effectivePartName,
+      part_number: partNumber,
       quantity,
-      model,
+      model: modelUnit,
       chassis_number: chassis || 'MHFJ1JGBMK000000',
-      engine_number: engine || 'J08E-WD00000',
+      engine_number: engineNo || 'J08E-WD00000',
       mileage,
-      dealer_name: dealer,
+      dealer_name: dlr,
       qpi_number: qpiNumber,
-      judgement_qpi: judgementQpi,
+      judgement_qpi: judgment,
+      judgement_date: judgementDate,
       request_date: requestDate,
       tracking_status: trackingStatus,
     };
@@ -136,7 +176,7 @@ export async function parseAndImportExcel(buffer: Buffer): Promise<ExcelImportRe
       if (res.isNew) recordsInserted++;
       else recordsUpdated++;
     } catch (err: any) {
-      errors.push(`Baris ${rowNum} (${dtrNumber} - ${partName}): ${err.message || 'Gagal menyimpan ke database'}`);
+      errors.push(`Baris ${rowNum} (${trNo} - ${effectivePartName}): ${err.message || 'Gagal menyimpan ke database'}`);
     }
   }
 
@@ -153,24 +193,24 @@ export async function parseAndImportExcel(buffer: Buffer): Promise<ExcelImportRe
  */
 export function generateExcelTemplate(): Buffer {
   const sampleHeaders = [
-    'Nomor DTR',
-    'Part Name',
-    'Quantity',
-    'Model',
-    'No. Chassis (Ch)',
-    'No. Engine (EG)',
+    'TR_No',
+    'Part',
+    'Part Number',
+    'Model_Unit',
+    'Chassis',
+    'Engine_No',
     'Mileage',
-    'Dealer',
-    'Nomor QPI',
-    'Judgement QPI',
-    'Tanggal DTR'
+    'DLR',
+    'QPI Number',
+    'Judgment',
+    'Judgement Date'
   ];
 
   const sampleRows = [
     [
-      'DTR-2026-JKT-0101',
+      'TR-2026-JKT-0101',
       'Turbocharger Assembly',
-      1,
+      '24100-33120',
       'Hino 500 FM 260 JD (6x4 Dump)',
       'MHFJ1JGBMK003312',
       'J08E-WD33120',
@@ -181,9 +221,9 @@ export function generateExcelTemplate(): Buffer {
       '2026-10-15'
     ],
     [
-      'DTR-2026-SBY-0205',
+      'TR-2026-SBY-0205',
       'Common Rail High Pressure Pump',
-      1,
+      '22100-E0020',
       'Hino 500 FL 260 JW (6x2)',
       'MHFJ1JGCMK019940',
       'J08E-WE19940',
@@ -193,11 +233,11 @@ export function generateExcelTemplate(): Buffer {
       'Waiting Physical Sample',
       '2026-09-10'
     ],
-    // Case 1 DTR dengan 2 jenis sparepart berbeda
+    // Case 1 TR dengan beberapa jenis sparepart berbeda
     [
-      'DTR-2026-BDG-0310',
+      'TR-2026-BDG-0310',
       'Leaf Spring Rear No. 1',
-      2,
+      '48201-3820',
       'Hino Dutro 300 130 HD (4x2)',
       'MHFW1JGAMK024100',
       'W04D-TN24100',
@@ -208,9 +248,9 @@ export function generateExcelTemplate(): Buffer {
       '2026-10-01'
     ],
     [
-      'DTR-2026-BDG-0310',
+      'TR-2026-BDG-0310',
       'U-Bolt Spring Rear',
-      4,
+      '90117-16010',
       'Hino Dutro 300 130 HD (4x2)',
       'MHFW1JGAMK024100',
       'W04D-TN24100',
@@ -221,9 +261,9 @@ export function generateExcelTemplate(): Buffer {
       '2026-10-01'
     ],
     [
-      'DTR-2026-MDN-0412',
+      'TR-2026-MDN-0412',
       'Clutch Booster Assembly',
-      1,
+      '31470-1380',
       'Hino 500 FM 350 TH (Tractor Head)',
       'MHFJ1JTHMK005510',
       'P11C-VP55102',
@@ -239,21 +279,21 @@ export function generateExcelTemplate(): Buffer {
 
   // Set column widths
   ws['!cols'] = [
-    { wch: 20 }, // Nomor DTR
-    { wch: 30 }, // Part Name
-    { wch: 10 }, // Qty
-    { wch: 32 }, // Model
+    { wch: 20 }, // TR_No
+    { wch: 32 }, // Part
+    { wch: 18 }, // Part Number
+    { wch: 32 }, // Model_Unit
     { wch: 22 }, // Chassis
-    { wch: 18 }, // Engine
+    { wch: 18 }, // Engine_No
     { wch: 12 }, // Mileage
-    { wch: 38 }, // Dealer
-    { wch: 20 }, // QPI
-    { wch: 28 }, // Judgement QPI
-    { wch: 15 }  // Tanggal
+    { wch: 38 }, // DLR
+    { wch: 20 }, // QPI Number
+    { wch: 26 }, // Judgment
+    { wch: 16 }  // Judgement Date
   ];
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Monitoring_OPF_HMSI');
+  XLSX.utils.book_append_sheet(wb, ws, 'Monitoring_OFP_HMSI');
 
   return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 }

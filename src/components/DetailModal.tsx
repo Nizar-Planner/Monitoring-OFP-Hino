@@ -203,23 +203,23 @@ export const DetailModal: React.FC<DetailModalProps> = ({
 
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
-                  <span className="text-slate-500 block text-[11px]">Model Kendaraan</span>
+                  <span className="text-slate-500 block text-[11px]">Model_Unit</span>
                   <span className="font-semibold text-slate-900">{record.model}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[11px]">Jarak Tempuh (Odometer)</span>
+                  <span className="text-slate-500 block text-[11px]">Mileage (Odometer)</span>
                   <span className="font-mono font-bold text-slate-900">
                     {record.mileage?.toLocaleString('id-ID')} km
                   </span>
                 </div>
                 <div className="col-span-2">
-                  <span className="text-slate-500 block text-[11px]">Nomor Rangka (Chassis / VIN)</span>
+                  <span className="text-slate-500 block text-[11px]">Chassis (No. Rangka / VIN)</span>
                   <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
                     {record.chassis_number}
                   </span>
                 </div>
                 <div className="col-span-2">
-                  <span className="text-slate-500 block text-[11px]">Nomor Mesin (Engine No)</span>
+                  <span className="text-slate-500 block text-[11px]">Engine_No (No. Mesin)</span>
                   <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
                     {record.engine_number}
                   </span>
@@ -232,27 +232,39 @@ export const DetailModal: React.FC<DetailModalProps> = ({
               <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
                 <Building className="w-4 h-4 text-blue-600" />
                 <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wide">
-                  Detail Dealer &amp; QPI
+                  Detail DLR, Part &amp; Judgment
                 </h4>
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="col-span-2">
-                  <span className="text-slate-500 block text-[11px]">Dealer Pelapor</span>
+                  <span className="text-slate-500 block text-[11px]">DLR (Dealer Pelapor)</span>
                   <span className="font-semibold text-slate-900">{record.dealer_name}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[11px]">Nomor QPI</span>
+                  <span className="text-slate-500 block text-[11px]">Part Number</span>
+                  <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    {record.part_number || '-'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[11px]">Quantity</span>
+                  <span className="font-mono font-bold text-red-600">{record.quantity} Unit</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[11px]">QPI Number</span>
                   <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
                     {record.qpi_number || '-'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[11px]">Kuantitas Part</span>
-                  <span className="font-mono font-bold text-red-600">{record.quantity} Unit</span>
+                  <span className="text-slate-500 block text-[11px]">Judgement Date</span>
+                  <span className="font-mono font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
+                    {record.judgement_date || '-'}
+                  </span>
                 </div>
                 <div className="col-span-2">
-                  <span className="text-slate-500 block text-[11px]">Judgement QPI</span>
+                  <span className="text-slate-500 block text-[11px]">Judgment</span>
                   <span className="font-medium text-slate-900">{record.judgement_qpi || '-'}</span>
                 </div>
               </div>

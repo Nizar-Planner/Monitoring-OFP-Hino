@@ -35,7 +35,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-base font-extrabold tracking-tight text-slate-900 whitespace-nowrap">
-                HINO OPF TRACKER
+                HINO OFP TRACKER
               </span>
               <span className="text-[10px] font-bold text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded uppercase">
                 HMSI Quality Hub

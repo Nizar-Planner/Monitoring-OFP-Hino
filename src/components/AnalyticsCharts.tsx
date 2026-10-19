@@ -189,7 +189,7 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
                 <ShieldAlert className="w-10 h-10 text-emerald-500 mb-2" />
                 <p className="font-semibold text-slate-700 text-xs">Semua Part Masih dalam Batas Aman (&le; 30 Hari)</p>
                 <p className="text-[11px] text-slate-400 mt-1 max-w-sm">
-                  Hebat! Tidak ada klaim OPF yang melewati 30 hari. Seluruh aliran klaim ke supplier berjalan tepat waktu.
+                  Hebat! Tidak ada klaim OFP yang melewati 30 hari. Seluruh aliran klaim ke supplier berjalan tepat waktu.
                 </p>
               </div>
             )}

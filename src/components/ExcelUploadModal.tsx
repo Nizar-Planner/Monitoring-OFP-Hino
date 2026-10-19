@@ -95,7 +95,7 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-sm sm:text-base">Upload Excel Monitoring OPF</h3>
+              <h3 className="font-bold text-sm sm:text-base">Upload Excel Monitoring OFP</h3>
               <p className="text-xs text-slate-400">
                 Impor data dari folder sharing OneDrive kantor / file Excel lokal
               </p>
@@ -176,12 +176,12 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
             <span className="font-bold text-slate-700 block text-[11px] uppercase tracking-wide">
               Kolom Excel yang Diekstrak Otomatis:
             </span>
-            <p className="text-[11px] text-slate-600 leading-relaxed font-mono">
-              Nomor DTR · Part Name · Quantity · Model · No. Chassis (Ch) · No. Engine (EG) · Mileage · Dealer · Nomor QPI · Judgement QPI
+            <p className="text-[11px] text-emerald-800 bg-emerald-50/60 p-2 rounded border border-emerald-200 font-mono leading-relaxed">
+              TR_No · Part · Part Number · Model_Unit · Chassis · Engine_No · Mileage · DLR · QPI Number · Judgment · Judgement Date
             </p>
             <div className="pt-1.5 border-t border-slate-200 text-[11px] text-slate-500 space-y-0.5">
-              <p>• <strong>Anti-Duplikasi Cerdas:</strong> Jika data yang sama di-upload ulang, sistem otomatis memperbarui baris data tanpa merusak foto bukti verifikasi yang sudah tersimpan.</p>
-              <p>• <strong>Multi-Part dalam 1 DTR:</strong> Jika 1 DTR memiliki beberapa jenis sparepart berbeda, sistem akan menyimpannya sebagai baris terpisah secara rapi.</p>
+              <p>• <strong>Anti-Duplikasi Cerdas:</strong> Jika data TR / Part yang sama di-upload ulang, sistem otomatis memperbarui baris data tanpa merusak foto bukti verifikasi yang sudah tersimpan.</p>
+              <p>• <strong>Multi-Part dalam 1 TR:</strong> Jika 1 Nomor TR memiliki beberapa jenis sparepart berbeda (berdasarkan Part Number / Part), sistem menyimpannya sebagai baris terpisah secara rapi.</p>
             </div>
           </div>
 

@@ -75,6 +75,7 @@ function createTables(db: Database): void {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       dtr_number TEXT NOT NULL,
       part_name TEXT NOT NULL,
+      part_number TEXT DEFAULT '',
       quantity INTEGER NOT NULL DEFAULT 1,
       model TEXT NOT NULL,
       chassis_number TEXT NOT NULL,
@@ -83,6 +84,7 @@ function createTables(db: Database): void {
       dealer_name TEXT NOT NULL,
       qpi_number TEXT DEFAULT '',
       judgement_qpi TEXT DEFAULT '',
+      judgement_date TEXT DEFAULT NULL,
       request_date TEXT NOT NULL,
       tracking_status TEXT NOT NULL DEFAULT 'Waiting OFP',
       
@@ -108,7 +110,20 @@ function createTables(db: Database): void {
     );
   `);
 
+  // Migrate existing tables if columns not present
+  try {
+    db.run("ALTER TABLE opf_records ADD COLUMN part_number TEXT DEFAULT ''");
+  } catch (_e) {
+    // column already exists
+  }
+  try {
+    db.run("ALTER TABLE opf_records ADD COLUMN judgement_date TEXT DEFAULT NULL");
+  } catch (_e) {
+    // column already exists
+  }
+
   db.run(`CREATE INDEX IF NOT EXISTS idx_dtr_part ON opf_records (dtr_number, part_name);`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_dtr_part_no ON opf_records (dtr_number, part_number);`);
 }
 
 function seedInitialData(db: Database): void {
@@ -339,13 +354,14 @@ export async function getAllOpfRecords(query = '', statusFilter = 'all', overdue
     const q = `%${query.trim()}%`;
     sql += ` AND (dtr_number LIKE ? 
              OR part_name LIKE ? 
+             OR part_number LIKE ?
              OR model LIKE ? 
              OR chassis_number LIKE ? 
              OR engine_number LIKE ? 
              OR dealer_name LIKE ? 
              OR qpi_number LIKE ?
              OR judgement_qpi LIKE ?)`;
-    params.push(q, q, q, q, q, q, q, q);
+    params.push(q, q, q, q, q, q, q, q, q);
   }
 
   if (statusFilter && statusFilter !== 'all') {
@@ -394,18 +410,26 @@ export async function getOpfById(id: number): Promise<OpfRecord | null> {
 }
 
 /**
- * Inserts or updates an OPF item.
- * Anti-duplikasi: Key is (dtr_number, part_name). If row exists, updates master fields, preserving photo/verification.
+ * Inserts or updates an OFP item.
+ * Anti-duplikasi: Key is (dtr_number, part_number) or (dtr_number, part_name).
+ * If row exists, updates master fields, preserving photo/verification.
  */
 export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boolean; id: number }> {
   const db = await getDb();
 
   const days = calculateDaysElapsed(record.request_date, record.shipped_date);
   const isOverdue = (days > 30 && record.tracking_status !== 'Delivered') ? 1 : 0;
+  const partNum = (record.part_number || '').trim();
 
-  // Check matching (dtr_number, part_name)
-  const checkStmt = db.prepare('SELECT id, area_received_date, area_received_by, area_photo, area_notes, quality_checked_date, quality_checked_by, quality_photo, quality_notes, shipped_date, shipping_resi, shipping_carrier, tracking_status FROM opf_records WHERE dtr_number = ? AND part_name = ?');
-  checkStmt.bind([record.dtr_number, record.part_name]);
+  // Check matching: if part_number exists, check (dtr_number, part_number) OR (dtr_number, part_name)
+  let checkStmt;
+  if (partNum) {
+    checkStmt = db.prepare('SELECT id, area_received_date, area_received_by, area_photo, area_notes, quality_checked_date, quality_checked_by, quality_photo, quality_notes, shipped_date, shipping_resi, shipping_carrier, tracking_status FROM opf_records WHERE dtr_number = ? AND (part_number = ? OR part_name = ?)');
+    checkStmt.bind([record.dtr_number, partNum, record.part_name]);
+  } else {
+    checkStmt = db.prepare('SELECT id, area_received_date, area_received_by, area_photo, area_notes, quality_checked_date, quality_checked_by, quality_photo, quality_notes, shipped_date, shipping_resi, shipping_carrier, tracking_status FROM opf_records WHERE dtr_number = ? AND part_name = ?');
+    checkStmt.bind([record.dtr_number, record.part_name]);
+  }
   const exists = checkStmt.step();
 
   let existing: any = null;
@@ -433,8 +457,8 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
 
     db.run(
       `UPDATE opf_records 
-       SET quantity = ?, model = ?, chassis_number = ?, engine_number = ?, 
-           mileage = ?, dealer_name = ?, qpi_number = ?, judgement_qpi = ?, 
+       SET part_name = ?, part_number = ?, quantity = ?, model = ?, chassis_number = ?, engine_number = ?, 
+           mileage = ?, dealer_name = ?, qpi_number = ?, judgement_qpi = ?, judgement_date = ?,
            request_date = ?, tracking_status = ?,
            area_received_date = ?, area_received_by = ?, area_photo = ?, area_notes = ?,
            quality_checked_date = ?, quality_checked_by = ?, quality_photo = ?, quality_notes = ?,
@@ -442,7 +466,9 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
            days_elapsed = ?, is_overdue = ?, updated_at = datetime('now')
        WHERE id = ?`,
       [
-        record.quantity,
+        record.part_name,
+        partNum,
+        record.quantity || 1,
         record.model,
         record.chassis_number,
         record.engine_number,
@@ -450,6 +476,7 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
         record.dealer_name,
         record.qpi_number || '',
         record.judgement_qpi || '',
+        record.judgement_date || null,
         record.request_date,
         status,
         areaDate,
@@ -473,12 +500,13 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
   } else {
     db.run(
       `INSERT INTO opf_records 
-       (dtr_number, part_name, quantity, model, chassis_number, engine_number, mileage, dealer_name, qpi_number, judgement_qpi, request_date, tracking_status, area_received_date, area_received_by, area_photo, area_notes, quality_checked_date, quality_checked_by, quality_photo, quality_notes, shipped_date, shipping_resi, shipping_carrier, days_elapsed, is_overdue)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (dtr_number, part_name, part_number, quantity, model, chassis_number, engine_number, mileage, dealer_name, qpi_number, judgement_qpi, judgement_date, request_date, tracking_status, area_received_date, area_received_by, area_photo, area_notes, quality_checked_date, quality_checked_by, quality_photo, quality_notes, shipped_date, shipping_resi, shipping_carrier, days_elapsed, is_overdue)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         record.dtr_number,
         record.part_name,
-        record.quantity,
+        partNum,
+        record.quantity || 1,
         record.model,
         record.chassis_number,
         record.engine_number,
@@ -486,6 +514,7 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
         record.dealer_name,
         record.qpi_number || '',
         record.judgement_qpi || '',
+        record.judgement_date || null,
         record.request_date || new Date().toISOString().split('T')[0],
         record.tracking_status || 'Waiting OFP',
         record.area_received_date || null,

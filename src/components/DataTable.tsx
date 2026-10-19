@@ -78,12 +78,13 @@ export const DataTable: React.FC<DataTableProps> = ({
         return false;
       }
 
-      // Search term (DTR, Part, Chassis, Engine, Dealer, QPI)
+      // Search term (TR_No, Part, Part Number, Chassis, Engine, DLR, QPI, Judgment)
       if (!searchTerm.trim()) return true;
       const term = searchTerm.toLowerCase();
       return (
         r.dtr_number?.toLowerCase().includes(term) ||
         r.part_name?.toLowerCase().includes(term) ||
+        r.part_number?.toLowerCase().includes(term) ||
         r.chassis_number?.toLowerCase().includes(term) ||
         r.engine_number?.toLowerCase().includes(term) ||
         r.dealer_name?.toLowerCase().includes(term) ||
@@ -179,7 +180,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="Cari DTR, Part Name, No. Chassis, No. Engine, Dealer, QPI..."
+              placeholder="Cari TR_No, Part, Part Number, Chassis, Engine_No, DLR, QPI Number..."
               className="w-full pl-9 pr-9 py-2 text-xs sm:text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 text-slate-900 placeholder-slate-400"
             />
             {searchTerm && (
@@ -204,7 +205,7 @@ export const DataTable: React.FC<DataTableProps> = ({
               }}
               className="px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-red-500"
             >
-              <option value="all">Semua Dealer ({dealersList.length})</option>
+              <option value="all">Semua DLR ({dealersList.length})</option>
               {dealersList.map((dealer) => (
                 <option key={dealer} value={dealer}>
                   {dealer}
@@ -309,7 +310,7 @@ export const DataTable: React.FC<DataTableProps> = ({
         {/* Count Summary */}
         <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
           <div>
-            Menampilkan <strong className="text-slate-900 font-mono tabular-nums">{filteredRecords.length}</strong> part OPF
+            Menampilkan <strong className="text-slate-900 font-mono tabular-nums">{filteredRecords.length}</strong> part OFP
             {isOverdueFilterActive && <span className="text-red-600 font-bold"> (Khusus Overdue &gt; 30 Hari)</span>}
             {searchTerm && <span> untuk kata kunci &ldquo;{searchTerm}&rdquo;</span>}
           </div>
@@ -324,16 +325,16 @@ export const DataTable: React.FC<DataTableProps> = ({
         <table className="w-full text-left border-collapse text-xs">
           <thead>
             <tr className="bg-slate-100/90 border-b border-slate-200 text-slate-700 font-semibold uppercase tracking-wider text-[11px]">
-              <th className="py-3 px-4 whitespace-nowrap">Nomor DTR</th>
-              <th className="py-3 px-4 whitespace-nowrap">Part Name</th>
+              <th className="py-3 px-4 whitespace-nowrap">TR_No</th>
+              <th className="py-3 px-4 whitespace-nowrap">Part &amp; Part Number</th>
               <th className="py-3 px-2 text-center whitespace-nowrap">Qty</th>
-              <th className="py-3 px-4 whitespace-nowrap">Model Unit</th>
-              <th className="py-3 px-4 whitespace-nowrap font-mono">No. Chassis (Ch)</th>
-              <th className="py-3 px-4 whitespace-nowrap font-mono">No. Engine (EG)</th>
+              <th className="py-3 px-4 whitespace-nowrap">Model_Unit</th>
+              <th className="py-3 px-4 whitespace-nowrap font-mono">Chassis</th>
+              <th className="py-3 px-4 whitespace-nowrap font-mono">Engine_No</th>
               <th className="py-3 px-3 text-right whitespace-nowrap">Mileage</th>
-              <th className="py-3 px-4 whitespace-nowrap">Dealer</th>
-              <th className="py-3 px-3 whitespace-nowrap font-mono">No. QPI</th>
-              <th className="py-3 px-3 whitespace-nowrap">Judgement QPI</th>
+              <th className="py-3 px-4 whitespace-nowrap">DLR</th>
+              <th className="py-3 px-3 whitespace-nowrap font-mono">QPI Number</th>
+              <th className="py-3 px-3 whitespace-nowrap">Judgment</th>
               <th className="py-3 px-3 whitespace-nowrap text-center">Leadtime (Hari)</th>
               <th className="py-3 px-3 whitespace-nowrap text-center">Status Alur</th>
               <th className="py-3 px-3 whitespace-nowrap text-center">Bukti Foto</th>
@@ -352,20 +353,29 @@ export const DataTable: React.FC<DataTableProps> = ({
             ) : paginatedRecords.length > 0 ? (
               paginatedRecords.map((item) => (
                 <tr
-                  key={`${item.id || item.dtr_number}-${item.part_name}`}
+                  key={`${item.id || item.dtr_number}-${item.part_name}-${item.part_number || ''}`}
                   onClick={() => onSelectRecord(item)}
                   className={`hover:bg-slate-50/80 cursor-pointer transition-colors ${
                     item.is_overdue ? 'bg-red-50/30' : ''
                   }`}
                 >
-                  {/* Nomor DTR */}
+                  {/* TR_No */}
                   <td className="py-3 px-4 whitespace-nowrap font-mono font-bold text-red-600">
                     {item.dtr_number}
                   </td>
 
-                  {/* Part Name */}
-                  <td className="py-3 px-4 font-bold text-slate-900 whitespace-nowrap max-w-[200px] truncate" title={item.part_name}>
-                    {item.part_name}
+                  {/* Part & Part Number */}
+                  <td className="py-3 px-4 whitespace-nowrap max-w-[220px]">
+                    <div className="font-bold text-slate-900 truncate" title={item.part_name}>
+                      {item.part_name}
+                    </div>
+                    {item.part_number ? (
+                      <div className="text-[11px] font-mono font-semibold text-emerald-700 truncate" title={`Part Number: ${item.part_number}`}>
+                        PN: {item.part_number}
+                      </div>
+                    ) : (
+                      <div className="text-[10px] text-slate-400 font-mono">-</div>
+                    )}
                   </td>
 
                   {/* Qty */}
@@ -373,7 +383,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                     {item.quantity}
                   </td>
 
-                  {/* Model */}
+                  {/* Model_Unit */}
                   <td className="py-3 px-4 text-slate-700 whitespace-nowrap max-w-[180px] truncate" title={item.model}>
                     {item.model}
                   </td>
@@ -383,7 +393,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                     {item.chassis_number}
                   </td>
 
-                  {/* Engine */}
+                  {/* Engine_No */}
                   <td className="py-3 px-4 font-mono text-slate-600 whitespace-nowrap">
                     {item.engine_number}
                   </td>
@@ -393,19 +403,26 @@ export const DataTable: React.FC<DataTableProps> = ({
                     {item.mileage ? `${item.mileage.toLocaleString('id-ID')} km` : '-'}
                   </td>
 
-                  {/* Dealer */}
+                  {/* DLR */}
                   <td className="py-3 px-4 text-slate-700 whitespace-nowrap max-w-[180px] truncate" title={item.dealer_name}>
                     {item.dealer_name}
                   </td>
 
-                  {/* Nomor QPI */}
+                  {/* QPI Number */}
                   <td className="py-3 px-3 font-mono font-medium text-slate-700 whitespace-nowrap">
                     {item.qpi_number || '-'}
                   </td>
 
-                  {/* Judgement QPI */}
-                  <td className="py-3 px-3 whitespace-nowrap max-w-[150px] truncate" title={item.judgement_qpi}>
-                    {item.judgement_qpi || 'In Review'}
+                  {/* Judgment & Judgement Date */}
+                  <td className="py-3 px-3 whitespace-nowrap max-w-[160px]">
+                    <div className="font-medium text-slate-900 truncate" title={item.judgement_qpi}>
+                      {item.judgement_qpi || 'In Review'}
+                    </div>
+                    {item.judgement_date && (
+                      <div className="text-[10px] font-mono text-slate-500">
+                        Tgl: {item.judgement_date}
+                      </div>
+                    )}
                   </td>
 
                   {/* Leadtime Hari */}
@@ -491,7 +508,7 @@ export const DataTable: React.FC<DataTableProps> = ({
             ) : (
               <tr>
                 <td colSpan={14} className="py-12 text-center text-slate-500">
-                  <p className="font-semibold text-slate-700">Tidak ada data klaim OPF yang cocok dengan filter.</p>
+                  <p className="font-semibold text-slate-700">Tidak ada data klaim OFP yang cocok dengan filter.</p>
                   <p className="text-xs text-slate-400 mt-1">Coba ubah kata kunci atau upload file Excel monitoring baru.</p>
                 </td>
               </tr>

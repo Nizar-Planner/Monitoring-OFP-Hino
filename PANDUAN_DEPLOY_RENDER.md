@@ -1,10 +1,10 @@
-# 🚚 Panduan Lengkap Dashboard Monitoring & Tracking OPF Hino (HMSI -> HMMI/HML)
+# 🚚 Panduan Lengkap Dashboard Monitoring & Tracking OFP Hino (HMSI -> HMMI/HML)
 *Solusi Pengendalian Lead Time &le; 30 Hari &amp; Bukti Foto Serah Terima Fisik Part*
 
 ---
 
 ## 🎯 Latar Belakang & Solusi
-Di sistem garansi Hino, seringkali terjadi part **OPF (Original Part Failure)** yang diambil dari Dealer terlambat dikirim ke Supplier pabrik (**HMMI/HML**) melebihi batas waktu **30 hari**. Akibatnya, klaim investigasi di-**REJECT** oleh supplier dengan alasan ***"OFP Not Return"***.
+Di sistem garansi Hino, seringkali terjadi part **OFP (Original Part Failure)** yang diambil dari Dealer terlambat dikirim ke Supplier pabrik (**HMMI/HML**) melebihi batas waktu **30 hari**. Akibatnya, klaim investigasi di-**REJECT** oleh supplier dengan alasan ***"OFP Not Return"***.
 
 Website ini dibuat khusus untuk memonitor alur ini secara transparan:
 1. **Dealer &rarr; HMSI**: Tim Area mengonfirmasi saat part tiba di transit HMSI + meng-upload foto bukti fisik penerimaan part.
