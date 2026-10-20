@@ -9,6 +9,32 @@
     <meta property="og:description" content="Dashboard monitoring dan tracking Original Failure Part (OFP) Hino Motors untuk memantau alur klaim Dealer -> HMSI -> HMMI/HML secara otomatis." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      // Gracefully suppress benign Vite HMR WebSocket connection errors in sandbox iframe environment
+      window.addEventListener('error', function (event) {
+        if (
+          event.message &&
+          (event.message.includes('WebSocket') ||
+           event.message.includes('createWebSocketModuleRunnerTransport') ||
+           event.message.includes('failed to connect') ||
+           (event.filename && event.filename.includes('@vite/client')))
+        ) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        }
+      }, true);
+      window.addEventListener('unhandledrejection', function (event) {
+        var str = String((event.reason && (event.reason.stack || event.reason)) || '');
+        if (
+          str.includes('WebSocket') ||
+          str.includes('@vite/client') ||
+          str.includes('createWebSocketModuleRunnerTransport')
+        ) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        }
+      }, true);
+    </script>
   </head>
   <body>
     <div id="root"></div>

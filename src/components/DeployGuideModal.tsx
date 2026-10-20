@@ -22,7 +22,7 @@ export const DeployGuideModal: React.FC<DeployGuideModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const [activeTab, setActiveTab] = useState<'onedrive' | 'local' | 'cloud'>('onedrive');
+  const [activeTab, setActiveTab] = useState<'onedrive' | 'local' | 'cloud' | 'supabase'>('supabase');
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
@@ -36,10 +36,10 @@ export const DeployGuideModal: React.FC<DeployGuideModalProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-sm sm:text-base">
-                Panduan Operasional &amp; Cara Menjalankan
+                Panduan Operasional &amp; Integrasi Database
               </h3>
               <p className="text-xs text-slate-400">
-                Integrasi Excel OneDrive Kantor, Laptop Kantor, dan Hosting Cloud
+                Setup Supabase PostgreSQL, Storage Foto, Excel OneDrive &amp; Deployment
               </p>
             </div>
           </div>
@@ -52,7 +52,19 @@ export const DeployGuideModal: React.FC<DeployGuideModalProps> = ({
         </div>
 
         {/* Tab Selection */}
-        <div className="grid grid-cols-3 border-b border-slate-200 bg-slate-50 text-xs font-semibold">
+        <div className="grid grid-cols-4 border-b border-slate-200 bg-slate-50 text-xs font-semibold">
+          <button
+            onClick={() => setActiveTab('supabase')}
+            className={`py-3 px-2 text-center border-b-2 transition-colors flex items-center justify-center gap-1.5 ${
+              activeTab === 'supabase'
+                ? 'border-emerald-600 text-emerald-700 bg-white font-bold'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Server className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Supabase</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('onedrive')}
             className={`py-3 px-2 text-center border-b-2 transition-colors flex items-center justify-center gap-1.5 ${
@@ -62,7 +74,7 @@ export const DeployGuideModal: React.FC<DeployGuideModalProps> = ({
             }`}
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>1. Alur Excel OneDrive</span>
+            <span>OneDrive</span>
           </button>
 
           <button
@@ -74,7 +86,7 @@ export const DeployGuideModal: React.FC<DeployGuideModalProps> = ({
             }`}
           >
             <Laptop className="w-3.5 h-3.5" />
-            <span>2. Di Laptop Kantor</span>
+            <span>Laptop</span>
           </button>
 
           <button
@@ -85,14 +97,65 @@ export const DeployGuideModal: React.FC<DeployGuideModalProps> = ({
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Server className="w-3.5 h-3.5" />
-            <span>3. Pasang di Cloud</span>
+            <Cloud className="w-3.5 h-3.5" />
+            <span>Hosting</span>
           </button>
         </div>
 
         {/* Body Content */}
         <div className="p-6 overflow-y-auto space-y-4 text-xs sm:text-sm text-slate-700">
           
+          {/* TAB 0: SUPABASE POSTGRESQL & STORAGE */}
+          {activeTab === 'supabase' && (
+            <div className="space-y-3.5">
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1">
+                <span className="font-bold text-emerald-950 text-xs sm:text-sm flex items-center gap-1.5">
+                  <Server className="w-4 h-4 text-emerald-600" />
+                  Integrasi Supabase (PostgreSQL Database &amp; Storage Bucket)
+                </span>
+                <p className="text-[11px] text-emerald-800 leading-relaxed">
+                  Semua data klaim OPF, tracking lead time, dan foto bukti fisik part failure kini dapat tersimpan permanen di cloud Supabase secara real-time.
+                </p>
+              </div>
+
+              <div className="space-y-3 text-xs text-slate-600">
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5">
+                  <span className="font-bold text-slate-900 block">Langkah 1: Buat Proyek Supabase</span>
+                  <p>Buka <a href="https://supabase.com" target="_blank" rel="noreferrer" className="text-emerald-600 font-bold underline">supabase.com</a> dan buat project baru (Free tier).</p>
+                </div>
+
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5">
+                  <span className="font-bold text-slate-900 block">Langkah 2: Eksekusi Skema SQL (schema.sql)</span>
+                  <p>Buka menu <strong>SQL Editor</strong> di dashboard Supabase Anda, salin seluruh isi file <code>schema.sql</code> dari proyek ini, lalu klik <strong>Run</strong>.</p>
+                  <p className="text-[11px] text-slate-500">Skrip ini otomatis membuat tabel <code>opf_records</code>, indeks pencarian, RLS policies, dan storage bucket <code>opf-attachments</code>.</p>
+                </div>
+
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5">
+                  <span className="font-bold text-slate-900 block">Langkah 3: Ambil Kredensial API</span>
+                  <p>Di dashboard Supabase, buka <strong>Project Settings &rarr; API</strong>, lalu salin:</p>
+                  <ul className="list-disc list-inside pl-2 space-y-0.5 font-mono text-[11px] text-slate-700">
+                    <li>Project URL (VITE_SUPABASE_URL)</li>
+                    <li>anon public key (VITE_SUPABASE_ANON_KEY)</li>
+                  </ul>
+                </div>
+
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5">
+                  <span className="font-bold text-slate-900 block">Langkah 4: Konfigurasi di File .env</span>
+                  <p>Masukkan kredensial ke dalam file <code>.env</code>:</p>
+                  <pre className="bg-slate-900 text-emerald-400 p-2.5 rounded-lg text-[11px] font-mono overflow-x-auto">
+{`VITE_SUPABASE_URL="https://your-project.supabase.co"
+VITE_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsIn..."
+SUPABASE_STORAGE_BUCKET="opf-attachments"`}
+                  </pre>
+                </div>
+
+                <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-[11px] text-blue-900 leading-relaxed">
+                  <strong>💡 Fitur Otomatis:</strong> Saat Supabase terhubung, semua upload Excel langsung melakukan <em>upsert</em> ke PostgreSQL. Foto part failure yang diambil oleh Tim Area atau Tim Quality akan langsung diunggah ke Storage Bucket dan URL publiknya tersimpan otomatis di database. Jika offline, sistem otomatis beralih ke local storage fallback tanpa crash.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* TAB 1: ONEDRIVE */}
           {activeTab === 'onedrive' && (
             <div className="space-y-3">

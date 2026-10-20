@@ -14,6 +14,7 @@ interface HeaderProps {
   onOpenGuide: () => void;
   activeStatusFilter: string;
   setActiveStatusFilter: (status: string) => void;
+  isSupabaseActive?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -22,6 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenGuide,
   activeStatusFilter,
   setActiveStatusFilter,
+  isSupabaseActive = false,
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
@@ -33,13 +35,26 @@ export const Header: React.FC<HeaderProps> = ({
             H
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-base font-extrabold tracking-tight text-slate-900 whitespace-nowrap">
                 HINO OFP TRACKER
               </span>
               <span className="text-[10px] font-bold text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded uppercase">
                 HMSI Quality Hub
               </span>
+              <button
+                type="button"
+                onClick={onOpenGuide}
+                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex items-center gap-1 cursor-pointer transition-colors ${
+                  isSupabaseActive 
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                    : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100'
+                }`}
+                title="Klik untuk melihat panduan setup Supabase & koneksi"
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${isSupabaseActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                <span>{isSupabaseActive ? 'Supabase Live' : 'Supabase Config'}</span>
+              </button>
             </div>
             <p className="text-[11px] text-slate-500 hidden sm:block">
               Monitoring Leadtime Part: Dealer &rarr; HMSI &rarr; HMMI / HML (Target &le; 30 Hari)

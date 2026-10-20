@@ -9,16 +9,25 @@ import {
   getAllOpfRecords,
   getOpfById,
   insertOrUpdateOpf,
+  bulkInsertOrUpdateOpf,
   updateAreaReceipt,
   updateQualityInspection,
   updateDeliveryToHmmi,
   deleteOpfRecord,
   getOpfStats,
+  isUsingSupabase,
   OpfRecord
 } from './src/server/db.js';
 import { parseAndImportExcel, generateExcelTemplate } from './src/server/excel.js';
+import {
+  isSupabaseConfigured,
+  uploadPhotoToSupabase,
+  SUPABASE_STORAGE_BUCKET,
+  SUPABASE_URL
+} from './src/lib/supabase.js';
 
 dotenv.config();
+process.env.DISABLE_HMR = 'true';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,14 +50,54 @@ const upload = multer({
 // API Endpoints
 // ==========================================
 
-// 1. Health check
+// 1. Health check & Supabase connection status
 app.get('/api/health', (_req, res) => {
+  const supabaseActive = isUsingSupabase();
   res.json({
     status: 'online',
     app: 'Hino OFP Monitoring & Tracking Dashboard (HMSI -> HMMI/HML)',
+    database: supabaseActive ? 'Supabase PostgreSQL' : 'Local SQLite Fallback',
+    supabase: {
+      configured: isSupabaseConfigured(),
+      active: supabaseActive,
+      bucket: SUPABASE_STORAGE_BUCKET,
+    },
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
   });
+});
+
+// 1b. Supabase Status Details
+app.get('/api/supabase/status', (_req, res) => {
+  const configured = isSupabaseConfigured();
+  const active = isUsingSupabase();
+  res.json({
+    success: true,
+    configured,
+    active,
+    url: configured ? SUPABASE_URL : null,
+    bucket: SUPABASE_STORAGE_BUCKET,
+  });
+});
+
+// 1c. Photo / Attachment Upload to Supabase Storage
+app.post('/api/upload-photo', async (req, res) => {
+  try {
+    const { photo, fileNamePrefix } = req.body;
+    if (!photo) {
+      return res.status(400).json({ success: false, error: 'Data foto (base64) wajib disertakan.' });
+    }
+
+    const uploadRes = await uploadPhotoToSupabase(photo, fileNamePrefix || 'part_proof');
+    if (uploadRes.success) {
+      res.json({ success: true, url: uploadRes.publicUrl });
+    } else {
+      res.status(500).json({ success: false, error: uploadRes.error || 'Gagal mengunggah foto ke Supabase Storage.' });
+    }
+  } catch (error: any) {
+    console.error('Error uploading photo:', error);
+    res.status(500).json({ success: false, error: error.message || 'Gagal mengunggah foto.' });
+  }
 });
 
 // 2. Get OFP Records with search & status filters
@@ -81,7 +130,18 @@ app.get('/api/opf/:id', async (req, res) => {
 });
 
 // 4. Excel File Upload (.xlsx / .xls)
-app.post('/api/upload-excel', upload.single('file'), async (req, res) => {
+app.post('/api/upload-excel', (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      console.error('[UPLOAD ERROR] Multer error:', err);
+      return res.status(400).json({
+        success: false,
+        error: `Gagal mengunggah file: ${err.message || 'Ukuran file melebihi batas (maks 25MB) atau format tidak valid.'}`
+      });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     if (!req.file || !req.file.buffer) {
       return res.status(400).json({ success: false, error: 'Pilih file Excel (.xlsx atau .xls) untuk di-upload.' });
@@ -100,6 +160,31 @@ app.post('/api/upload-excel', upload.single('file'), async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message || 'Gagal membaca file Excel. Pastikan format file sesuai.',
+    });
+  }
+});
+
+// 4b. Bulk OFP Records Import (Direct JSON batching fallback)
+app.post('/api/opf/bulk', async (req, res) => {
+  try {
+    const records = req.body.records;
+    if (!Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({ success: false, error: 'Daftar data OFP kosong.' });
+    }
+
+    console.log(`[BULK] Memproses ${records.length} records OFP.`);
+    const result = await bulkInsertOrUpdateOpf(records);
+
+    res.json({
+      success: true,
+      message: `Berhasil memproses ${result.totalRowsProcessed} data (${result.recordsInserted} baru, ${result.recordsUpdated} diperbarui).`,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('[BULK] Error processing records:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Gagal menyimpan batch data ke database.',
     });
   }
 });

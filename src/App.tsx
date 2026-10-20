@@ -15,6 +15,7 @@ export default function App() {
   const [records, setRecords] = useState<OpfRecord[]>([]);
   const [stats, setStats] = useState<StatsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSupabaseActive, setIsSupabaseActive] = useState(false);
 
   // Filters & State
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,13 +43,15 @@ export default function App() {
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [recRes, statsRes] = await Promise.all([
-        fetch('/api/opf').then((r) => r.json()),
-        fetch('/api/stats').then((r) => r.json()),
+      const [recRes, statsRes, sbRes] = await Promise.all([
+        fetch('/api/opf').then((r) => r.json()).catch(() => ({ success: false })),
+        fetch('/api/stats').then((r) => r.json()).catch(() => ({ success: false })),
+        fetch('/api/supabase/status').then((r) => r.json()).catch(() => ({ success: false, active: false })),
       ]);
 
       if (recRes.success) setRecords(recRes.data);
       if (statsRes.success) setStats(statsRes.data);
+      if (sbRes.success) setIsSupabaseActive(Boolean(sbRes.active));
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
     } finally {
@@ -137,6 +140,7 @@ export default function App() {
         onOpenManualEntry={() => setIsManualModalOpen(true)}
         onOpenGuide={() => setIsGuideModalOpen(true)}
         activeStatusFilter={statusFilter}
+        isSupabaseActive={isSupabaseActive}
         setActiveStatusFilter={(st) => {
           setStatusFilter(st);
           setIsOverdueFilterActive(false);

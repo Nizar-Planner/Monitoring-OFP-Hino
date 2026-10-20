@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload, FileSpreadsheet, Download, CheckCircle2, AlertTriangle, RefreshCw, FileText } from 'lucide-react';
-import { ExcelImportResult } from '../types';
+import { X, Upload, FileSpreadsheet, Download, CheckCircle2, AlertTriangle, RefreshCw, RotateCcw } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { ExcelImportResult, OpfRecord } from '../types';
+import { extractOpfRecordsFromSheet } from '../utils/excelParser';
 
 interface ExcelUploadModalProps {
   isOpen: boolean;
@@ -17,6 +19,7 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStep, setUploadStep] = useState<string | null>(null);
   const [uploadResult, setUploadResult] = useState<ExcelImportResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -52,6 +55,11 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
     }
   };
 
+  /**
+   * Dual-Strategy resilient upload & import:
+   * Strategy 1: Direct backend file streaming to /api/upload-excel
+   * Strategy 2 (Automatic Fallback): Client-side sheet parsing + batch JSON sync to /api/opf/bulk
+   */
   const handleSubmit = async () => {
     if (!selectedFile) {
       setErrorMessage('Pilih file Excel terlebih dahulu.');
@@ -60,28 +68,127 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
 
     setIsUploading(true);
     setErrorMessage(null);
-
-    const formData = new FormData();
-    formData.append('file', selectedFile);
+    setUploadResult(null);
+    setUploadStep('Mengunggah & memproses file Excel...');
 
     try {
-      const res = await fetch('/api/upload-excel', {
-        method: 'POST',
-        body: formData,
-      });
+      // Strategy 1: Multipart upload to backend endpoint
+      const formData = new FormData();
+      formData.append('file', selectedFile);
 
-      const data = await res.json();
-      if (data.success) {
-        setUploadResult(data.data);
-        onSuccess(data.data);
-      } else {
-        setErrorMessage(data.error || 'Gagal memproses file Excel.');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 45000); // 45s safety timeout
+
+      let res: Response;
+      try {
+        res = await fetch('/api/upload-excel', {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
       }
-    } catch (err: any) {
-      console.error(err);
-      setErrorMessage('Terjadi kesalahan koneksi saat meng-upload Excel.');
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setUploadResult(data.data);
+          onSuccess(data.data);
+          return;
+        } else {
+          throw new Error(data.error || 'Gagal memproses file Excel.');
+        }
+      } else {
+        let serverError = `Server error (${res.status})`;
+        try {
+          const errData = await res.json();
+          if (errData?.error) serverError = errData.error;
+        } catch {
+          // not JSON, fallback to status text
+          serverError = `${res.status} ${res.statusText}`;
+        }
+        throw new Error(serverError);
+      }
+    } catch (primaryErr: any) {
+      console.warn('[UPLOAD] Direct server upload failed or timed out. Initiating local client parsing fallback...', primaryErr);
+      setUploadStep('Mengalihkan ke pemrosesan lokal & sinkronisasi database...');
+
+      // Strategy 2 (Fallback): Parse file directly in browser and bulk-send JSON
+      try {
+        const arrayBuffer = await selectedFile.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        if (!firstSheetName) {
+          throw new Error('File Excel tidak memiliki lembar kerja (sheet).');
+        }
+
+        const worksheet = workbook.Sheets[firstSheetName];
+        const { records, errors: parseErrors } = extractOpfRecordsFromSheet(worksheet);
+
+        if (records.length === 0) {
+          if (parseErrors.length > 0) {
+            throw new Error(`Gagal membaca data Excel: ${parseErrors.slice(0, 3).join(', ')}`);
+          }
+          throw new Error('Tidak ada baris data valid yang ditemukan pada file Excel. Pastikan terdapat kolom TR_No dan Part.');
+        }
+
+        setUploadStep(`Menyimpan ${records.length} data OFP ke database...`);
+
+        // Chunk sending to prevent oversized JSON payloads (500 records per chunk)
+        const CHUNK_SIZE = 500;
+        let totalRowsProcessed = 0;
+        let recordsInserted = 0;
+        let recordsUpdated = 0;
+        const allErrors: string[] = [...parseErrors];
+
+        for (let i = 0; i < records.length; i += CHUNK_SIZE) {
+          const chunk = records.slice(i, i + CHUNK_SIZE);
+          setUploadStep(`Menyimpan data baris ${i + 1} - ${Math.min(i + CHUNK_SIZE, records.length)} dari ${records.length}...`);
+
+          const bulkRes = await fetch('/api/opf/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ records: chunk }),
+          });
+
+          if (!bulkRes.ok) {
+            let bulkErrMsg = `Gagal menyimpan batch (status ${bulkRes.status})`;
+            try {
+              const bData = await bulkRes.json();
+              if (bData?.error) bulkErrMsg = bData.error;
+            } catch {}
+            throw new Error(bulkErrMsg);
+          }
+
+          const bulkData = await bulkRes.json();
+          if (bulkData.success && bulkData.data) {
+            totalRowsProcessed += bulkData.data.totalRowsProcessed;
+            recordsInserted += bulkData.data.recordsInserted;
+            recordsUpdated += bulkData.data.recordsUpdated;
+            if (bulkData.data.errors) allErrors.push(...bulkData.data.errors);
+          }
+        }
+
+        const fallbackResult: ExcelImportResult = {
+          totalRowsProcessed,
+          recordsInserted,
+          recordsUpdated,
+          errors: allErrors,
+        };
+
+        setUploadResult(fallbackResult);
+        onSuccess(fallbackResult);
+      } catch (fallbackErr: any) {
+        console.error('[FALLBACK IMPORT ERROR]', fallbackErr);
+        const detailedMsg = fallbackErr.message || 'Gagal memproses file Excel.';
+        setErrorMessage(
+          `Gagal mengimpor file: ${detailedMsg}. Pastikan file Excel tidak rusak dan koneksi server stabil.`
+        );
+      }
     } finally {
       setIsUploading(false);
+      setUploadStep(null);
     }
   };
 
@@ -185,17 +292,34 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
             </div>
           </div>
 
+          {/* Processing step indicator */}
+          {isUploading && uploadStep && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2.5 text-xs text-blue-700">
+              <RefreshCw className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
+              <span className="font-medium">{uploadStep}</span>
+            </div>
+          )}
+
           {/* Error Message */}
           {errorMessage && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 text-xs text-red-700">
-              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-              <span>{errorMessage}</span>
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start justify-between gap-2 text-xs text-red-700">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                <span>{errorMessage}</span>
+              </div>
+              <button
+                onClick={handleSubmit}
+                className="shrink-0 flex items-center gap-1 font-semibold text-red-800 hover:text-red-900 underline text-[11px]"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Coba Lagi</span>
+              </button>
             </div>
           )}
 
           {/* Success Summary */}
           {uploadResult && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg space-y-1 text-xs">
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg space-y-2 text-xs">
               <div className="flex items-center gap-1.5 font-bold text-emerald-900">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 <span>Impor Excel Berhasil!</span>
@@ -214,6 +338,19 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
                   <span className="font-bold text-blue-700">{uploadResult.recordsUpdated}</span>
                 </div>
               </div>
+              {uploadResult.errors && uploadResult.errors.length > 0 && (
+                <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-[11px] text-amber-800 max-h-24 overflow-y-auto">
+                  <span className="font-bold block mb-1">Catatan Baris Dilewati:</span>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    {uploadResult.errors.slice(0, 5).map((err, idx) => (
+                      <li key={idx}>{err}</li>
+                    ))}
+                    {uploadResult.errors.length > 5 && (
+                      <li>...dan {uploadResult.errors.length - 5} baris lainnya.</li>
+                    )}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
         </div>
