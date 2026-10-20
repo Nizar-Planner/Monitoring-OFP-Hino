@@ -1,9 +1,9 @@
 import * as XLSX from 'xlsx';
 import { OpfRecord, ExcelImportResult } from '../types.js';
 import { bulkInsertOrUpdateOpf } from './db.js';
-import { extractOpfRecordsFromSheet, normalizeKey, parseExcelDate } from '../utils/excelParser.js';
+import { extractOpfRecordsFromSheet, normalizeKey, parseExcelDate, parseSafeExcelDate } from '../utils/excelParser.js';
 
-export { extractOpfRecordsFromSheet, normalizeKey, parseExcelDate };
+export { extractOpfRecordsFromSheet, normalizeKey, parseExcelDate, parseSafeExcelDate };
 
 /**
  * Reads Excel file buffer and imports rows into SQLite using high-speed bulk transactions
@@ -50,7 +50,9 @@ export function generateExcelTemplate(): Buffer {
     'DLR',
     'QPI Number',
     'Judgment',
-    'Judgement Date'
+    'Judgement Date',
+    'OFP Receive',
+    'OFP Send to HMMI'
   ];
 
   const sampleRows = [
@@ -65,7 +67,9 @@ export function generateExcelTemplate(): Buffer {
       'PT Duta Cemerlang Motors - Jakarta Barat',
       'QPI-HMSI-26-0601',
       'Under Technical Review',
-      '2026-10-15'
+      '2026-10-15',
+      '2026-10-18', // OFP Receive -> Status: Sent to HMMI (jika terkirim)
+      '2026-10-20'  // OFP Send to HMMI
     ],
     [
       'TR-2026-SBY-0205',
@@ -78,7 +82,9 @@ export function generateExcelTemplate(): Buffer {
       'PT Indomobil Prima Niaga - Surabaya',
       'QPI-HMSI-26-0602',
       'Waiting Physical Sample',
-      '2026-09-10'
+      '2026-09-10',
+      '2026-10-12', // OFP Receive -> Status: Received by Area
+      ''            // OFP Send to HMMI (belum kirim)
     ],
     // Case 1 TR dengan beberapa jenis sparepart berbeda
     [
@@ -92,7 +98,9 @@ export function generateExcelTemplate(): Buffer {
       'PT Maya Graha Indah - Bandung',
       'QPI-HMSI-26-0603',
       'Pending Metallurgical Lab',
-      '2026-10-01'
+      '2026-10-01',
+      '',           // OFP Receive (kosong) -> Status: Belum Terkirim
+      ''            // OFP Send to HMMI (kosong)
     ],
     [
       'TR-2026-BDG-0310',
@@ -105,7 +113,9 @@ export function generateExcelTemplate(): Buffer {
       'PT Maya Graha Indah - Bandung',
       'QPI-HMSI-26-0603',
       'Pending Inspection',
-      '2026-10-01'
+      '2026-10-01',
+      '',
+      ''
     ],
     [
       'TR-2026-MDN-0412',
@@ -118,7 +128,9 @@ export function generateExcelTemplate(): Buffer {
       'PT Indomobil Prima Niaga - Medan',
       'QPI-HMSI-26-0604',
       'Piston Seal Leaking',
-      '2026-09-14'
+      '2026-09-14',
+      '2026-10-05',
+      '2026-10-10'
     ]
   ];
 
@@ -136,7 +148,9 @@ export function generateExcelTemplate(): Buffer {
     { wch: 38 }, // DLR
     { wch: 20 }, // QPI Number
     { wch: 26 }, // Judgment
-    { wch: 16 }  // Judgement Date
+    { wch: 16 }, // Judgement Date
+    { wch: 18 }, // OFP Receive
+    { wch: 20 }  // OFP Send to HMMI
   ];
 
   const wb = XLSX.utils.book_new();

@@ -96,11 +96,11 @@ export const WorkflowTrackerCards: React.FC<WorkflowTrackerCardsProps> = ({
       {/* 3 Status Tracking Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         
-        {/* Card 1: Waiting OFP */}
+        {/* Card 1: Belum Terkirim / Waiting OFP */}
         <button
-          onClick={() => onSelectStatusFilter(activeStatusFilter === 'Waiting OFP' ? 'all' : 'Waiting OFP')}
+          onClick={() => onSelectStatusFilter((activeStatusFilter === 'Belum Terkirim' || activeStatusFilter === 'Waiting OFP') ? 'all' : 'Belum Terkirim')}
           className={`text-left p-5 rounded-xl border transition-all relative overflow-hidden bg-white ${
-            activeStatusFilter === 'Waiting OFP' && !isOverdueFilterActive
+            (activeStatusFilter === 'Belum Terkirim' || activeStatusFilter === 'Waiting OFP') && !isOverdueFilterActive
               ? 'border-amber-500 ring-2 ring-amber-500/20 shadow-md'
               : 'border-slate-200 hover:border-slate-300 hover:shadow-xs'
           }`}
@@ -112,7 +112,7 @@ export const WorkflowTrackerCards: React.FC<WorkflowTrackerCardsProps> = ({
               </div>
               <div>
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Status 1</span>
-                <span className="text-sm font-bold text-slate-900">Waiting OFP</span>
+                <span className="text-sm font-bold text-slate-900">Belum Terkirim</span>
               </div>
             </div>
             <span className="text-2xl font-extrabold text-amber-600 font-mono tabular-nums">
@@ -127,15 +127,15 @@ export const WorkflowTrackerCards: React.FC<WorkflowTrackerCardsProps> = ({
             </span>
           </div>
           <p className="text-[11px] text-slate-500 mt-2 line-clamp-2">
-            Part belum tiba di transit HMSI. Masih berada di bengkel dealer atau sedang dalam perjalanan ekspedisi ke HMSI.
+            Kolom <em>OFP Receive</em> dan <em>OFP Send to HMMI</em> kosong di Excel. Part masih berada di bengkel dealer.
           </p>
         </button>
 
-        {/* Card 2: Not yet shipped */}
+        {/* Card 2: Received by Area */}
         <button
-          onClick={() => onSelectStatusFilter(activeStatusFilter === 'Not yet shipped' ? 'all' : 'Not yet shipped')}
+          onClick={() => onSelectStatusFilter((activeStatusFilter === 'Received by Area' || activeStatusFilter === 'Not yet shipped') ? 'all' : 'Received by Area')}
           className={`text-left p-5 rounded-xl border transition-all relative overflow-hidden bg-white ${
-            activeStatusFilter === 'Not yet shipped' && !isOverdueFilterActive
+            (activeStatusFilter === 'Received by Area' || activeStatusFilter === 'Not yet shipped') && !isOverdueFilterActive
               ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-md'
               : 'border-slate-200 hover:border-slate-300 hover:shadow-xs'
           }`}
@@ -147,7 +147,7 @@ export const WorkflowTrackerCards: React.FC<WorkflowTrackerCardsProps> = ({
               </div>
               <div>
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Status 2</span>
-                <span className="text-sm font-bold text-slate-900">Not yet shipped</span>
+                <span className="text-sm font-bold text-slate-900">Received by Area</span>
               </div>
             </div>
             <span className="text-2xl font-extrabold text-blue-600 font-mono tabular-nums">
@@ -162,15 +162,15 @@ export const WorkflowTrackerCards: React.FC<WorkflowTrackerCardsProps> = ({
             </span>
           </div>
           <p className="text-[11px] text-slate-500 mt-2 line-clamp-2">
-            Part fisik sudah diterima Tim Area di HMSI. Sedang menunggu pengecekan/verifikasi Tim Quality untuk segera dikirimkan ke HMMI/HML.
+            Kolom <em>OFP Receive</em> terisi tanggal di Excel. Part fisik telah diterima Tim Area di HMSI.
           </p>
         </button>
 
-        {/* Card 3: Delivered */}
+        {/* Card 3: Sent to HMMI */}
         <button
-          onClick={() => onSelectStatusFilter(activeStatusFilter === 'Delivered' ? 'all' : 'Delivered')}
+          onClick={() => onSelectStatusFilter((activeStatusFilter === 'Sent to HMMI' || activeStatusFilter === 'Delivered') ? 'all' : 'Sent to HMMI')}
           className={`text-left p-5 rounded-xl border transition-all relative overflow-hidden bg-white ${
-            activeStatusFilter === 'Delivered' && !isOverdueFilterActive
+            (activeStatusFilter === 'Sent to HMMI' || activeStatusFilter === 'Delivered') && !isOverdueFilterActive
               ? 'border-emerald-500 ring-2 ring-emerald-500/20 shadow-md'
               : 'border-slate-200 hover:border-slate-300 hover:shadow-xs'
           }`}
@@ -182,7 +182,7 @@ export const WorkflowTrackerCards: React.FC<WorkflowTrackerCardsProps> = ({
               </div>
               <div>
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Status 3</span>
-                <span className="text-sm font-bold text-slate-900">Delivered (HMMI/HML)</span>
+                <span className="text-sm font-bold text-slate-900">Sent to HMMI</span>
               </div>
             </div>
             <span className="text-2xl font-extrabold text-emerald-600 font-mono tabular-nums">
@@ -197,7 +197,7 @@ export const WorkflowTrackerCards: React.FC<WorkflowTrackerCardsProps> = ({
             </span>
           </div>
           <p className="text-[11px] text-slate-500 mt-2 line-clamp-2">
-            Part sudah berhasil dikirimkan ke Supplier HMMI / HML sebelum batas waktu. Klaim garansi aman dari penolakan &ldquo;OFP Not Return&rdquo;.
+            Kolom <em>OFP Send to HMMI</em> terisi tanggal di Excel. Part fisik telah dikirimkan ke Supplier Pabrik HMMI / HML.
           </p>
         </button>
 

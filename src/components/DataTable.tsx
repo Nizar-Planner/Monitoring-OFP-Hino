@@ -68,9 +68,18 @@ export const DataTable: React.FC<DataTableProps> = ({
         return false;
       }
 
-      // Status filter
-      if (statusFilter !== 'all' && r.tracking_status !== statusFilter) {
-        return false;
+      // Status filter with bidirectional alias support
+      if (statusFilter !== 'all') {
+        const isWaitingGroup = (statusFilter === 'Waiting OFP' || statusFilter === 'Belum Terkirim') &&
+          (r.tracking_status === 'Waiting OFP' || r.tracking_status === 'Belum Terkirim');
+        const isAreaGroup = (statusFilter === 'Not yet shipped' || statusFilter === 'Received by Area') &&
+          (r.tracking_status === 'Not yet shipped' || r.tracking_status === 'Received by Area');
+        const isDeliveredGroup = (statusFilter === 'Delivered' || statusFilter === 'Sent to HMMI') &&
+          (r.tracking_status === 'Delivered' || r.tracking_status === 'Sent to HMMI');
+
+        if (!isWaitingGroup && !isAreaGroup && !isDeliveredGroup && r.tracking_status !== statusFilter) {
+          return false;
+        }
       }
 
       // Dealer filter
@@ -102,27 +111,30 @@ export const DataTable: React.FC<DataTableProps> = ({
     return filteredRecords.slice(start, start + itemsPerPage);
   }, [filteredRecords, currentPage, itemsPerPage]);
 
-  const renderStatusBadge = (status: TrackingStatus) => {
+  const renderStatusBadge = (status: TrackingStatus | string) => {
     switch (status) {
+      case 'Belum Terkirim':
       case 'Waiting OFP':
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
             <Clock className="w-3 h-3 text-amber-600" />
-            <span>Waiting OFP</span>
+            <span>Belum Terkirim</span>
           </span>
         );
+      case 'Received by Area':
       case 'Not yet shipped':
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
             <Building className="w-3 h-3 text-blue-600" />
-            <span>Not yet shipped</span>
+            <span>Received by Area</span>
           </span>
         );
+      case 'Sent to HMMI':
       case 'Delivered':
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
             <Truck className="w-3 h-3 text-emerald-600" />
-            <span>Delivered</span>
+            <span>Sent to HMMI</span>
           </span>
         );
       default:
@@ -246,45 +258,45 @@ export const DataTable: React.FC<DataTableProps> = ({
               </button>
               <button
                 onClick={() => {
-                  setStatusFilter('Waiting OFP');
+                  setStatusFilter('Belum Terkirim');
                   setIsOverdueFilterActive(false);
                   setCurrentPage(1);
                 }}
                 className={`px-2.5 py-1.5 rounded-md transition-colors ${
-                  statusFilter === 'Waiting OFP'
+                  (statusFilter === 'Belum Terkirim' || statusFilter === 'Waiting OFP')
                     ? 'bg-amber-600 text-white font-semibold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Waiting OFP
+                Belum Terkirim
               </button>
               <button
                 onClick={() => {
-                  setStatusFilter('Not yet shipped');
+                  setStatusFilter('Received by Area');
                   setIsOverdueFilterActive(false);
                   setCurrentPage(1);
                 }}
                 className={`px-2.5 py-1.5 rounded-md transition-colors ${
-                  statusFilter === 'Not yet shipped'
+                  (statusFilter === 'Received by Area' || statusFilter === 'Not yet shipped')
                     ? 'bg-blue-600 text-white font-semibold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Not yet shipped
+                Received by Area
               </button>
               <button
                 onClick={() => {
-                  setStatusFilter('Delivered');
+                  setStatusFilter('Sent to HMMI');
                   setIsOverdueFilterActive(false);
                   setCurrentPage(1);
                 }}
                 className={`px-2.5 py-1.5 rounded-md transition-colors ${
-                  statusFilter === 'Delivered'
+                  (statusFilter === 'Sent to HMMI' || statusFilter === 'Delivered')
                     ? 'bg-emerald-600 text-white font-semibold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Delivered
+                Sent to HMMI
               </button>
             </div>
 
@@ -430,7 +442,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                     {renderDaysBadge(
                       item.days_elapsed || 0,
                       Boolean(item.is_overdue),
-                      item.tracking_status === 'Delivered'
+                      item.tracking_status === 'Delivered' || item.tracking_status === 'Sent to HMMI'
                     )}
                   </td>
 

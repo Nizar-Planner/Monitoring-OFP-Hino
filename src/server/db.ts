@@ -348,7 +348,7 @@ export async function getAllOpfRecords(query = '', statusFilter = 'all', overdue
       } else if (data) {
         const records: OpfRecord[] = data.map((row: any) => {
           const days = calculateDaysElapsed(row.request_date, row.shipped_date);
-          const isOverdue = days > 30 && row.tracking_status !== 'Delivered';
+          const isOverdue = days > 30 && row.tracking_status !== 'Delivered' && row.tracking_status !== 'Sent to HMMI';
           return {
             ...row,
             id: Number(row.id),
@@ -416,7 +416,7 @@ export async function getAllOpfRecords(query = '', statusFilter = 'all', overdue
     const row = stmt.getAsObject() as unknown as OpfRecord;
     const days = calculateDaysElapsed(row.request_date, row.shipped_date);
     row.days_elapsed = days;
-    row.is_overdue = days > 30 && row.tracking_status !== 'Delivered';
+    row.is_overdue = days > 30 && row.tracking_status !== 'Delivered' && row.tracking_status !== 'Sent to HMMI';
     records.push(row);
   }
   stmt.free();
@@ -440,7 +440,7 @@ export async function getOpfById(id: number): Promise<OpfRecord | null> {
       if (!error && data) {
         const row = { ...data, id: Number(data.id) };
         row.days_elapsed = calculateDaysElapsed(row.request_date, row.shipped_date);
-        row.is_overdue = row.days_elapsed > 30 && row.tracking_status !== 'Delivered';
+        row.is_overdue = row.days_elapsed > 30 && row.tracking_status !== 'Delivered' && row.tracking_status !== 'Sent to HMMI';
         return row;
       }
     } catch (err) {
@@ -454,7 +454,7 @@ export async function getOpfById(id: number): Promise<OpfRecord | null> {
   if (stmt.step()) {
     const row = stmt.getAsObject() as unknown as OpfRecord;
     row.days_elapsed = calculateDaysElapsed(row.request_date, row.shipped_date);
-    row.is_overdue = row.days_elapsed > 30 && row.tracking_status !== 'Delivered';
+    row.is_overdue = row.days_elapsed > 30 && row.tracking_status !== 'Delivered' && row.tracking_status !== 'Sent to HMMI';
     stmt.free();
     return row;
   }
@@ -489,7 +489,7 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
 
   const supabase = getSupabaseClient();
   const days = calculateDaysElapsed(record.request_date, record.shipped_date);
-  const isOverdue = days > 30 && record.tracking_status !== 'Delivered';
+  const isOverdue = days > 30 && record.tracking_status !== 'Delivered' && record.tracking_status !== 'Sent to HMMI';
   const partNum = (record.part_number || '').trim();
 
   if (supabase) {
@@ -615,7 +615,7 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
  */
 function insertOrUpdateOpfInternal(db: Database, record: OpfRecord): { isNew: boolean; id: number } {
   const days = calculateDaysElapsed(record.request_date, record.shipped_date);
-  const isOverdue = (days > 30 && record.tracking_status !== 'Delivered') ? 1 : 0;
+  const isOverdue = (days > 30 && record.tracking_status !== 'Delivered' && record.tracking_status !== 'Sent to HMMI') ? 1 : 0;
   const partNum = (record.part_number || '').trim();
 
   let checkStmt;
@@ -1027,9 +1027,9 @@ export async function getOpfStats(): Promise<StatsData> {
   const dealerMap = new Map<string, { count: number; overdueCount: number }>();
 
   for (const r of records) {
-    if (r.tracking_status === 'Waiting OFP') waitingOfp++;
-    else if (r.tracking_status === 'Not yet shipped') notYetShipped++;
-    else if (r.tracking_status === 'Delivered') delivered++;
+    if (r.tracking_status === 'Waiting OFP' || r.tracking_status === 'Belum Terkirim') waitingOfp++;
+    else if (r.tracking_status === 'Not yet shipped' || r.tracking_status === 'Received by Area') notYetShipped++;
+    else if (r.tracking_status === 'Delivered' || r.tracking_status === 'Sent to HMMI') delivered++;
 
     if (r.is_overdue) {
       overdueCount++;
@@ -1040,7 +1040,7 @@ export async function getOpfStats(): Promise<StatsData> {
       overdueMap.set(r.part_name, current);
     }
 
-    if (r.area_received_date && !r.quality_checked_date && r.tracking_status !== 'Delivered') {
+    if (r.area_received_date && !r.quality_checked_date && r.tracking_status !== 'Delivered' && r.tracking_status !== 'Sent to HMMI') {
       pendingQualityVerificationCount++;
     }
 

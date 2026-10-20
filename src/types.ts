@@ -1,4 +1,10 @@
-export type TrackingStatus = 'Waiting OFP' | 'Not yet shipped' | 'Delivered';
+export type TrackingStatus =
+  | 'Belum Terkirim'
+  | 'Received by Area'
+  | 'Sent to HMMI'
+  | 'Waiting OFP'
+  | 'Not yet shipped'
+  | 'Delivered';
 
 export interface OpfRecord {
   id?: number;

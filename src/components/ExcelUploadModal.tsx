@@ -284,11 +284,16 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
               Kolom Excel yang Diekstrak Otomatis:
             </span>
             <p className="text-[11px] text-emerald-800 bg-emerald-50/60 p-2 rounded border border-emerald-200 font-mono leading-relaxed">
-              TR_No · Part · Part Number · Model_Unit · Chassis · Engine_No · Mileage · DLR · QPI Number · Judgment · Judgement Date
+              TR_No · Part · Part Number · Model_Unit · Chassis · Engine_No · Mileage · DLR · QPI Number · Judgment · Judgement Date · <strong className="text-emerald-900 bg-emerald-200/60 px-1 rounded">OFP Receive</strong> · <strong className="text-emerald-900 bg-emerald-200/60 px-1 rounded">OFP Send to HMMI</strong>
             </p>
-            <div className="pt-1.5 border-t border-slate-200 text-[11px] text-slate-500 space-y-0.5">
-              <p>• <strong>Anti-Duplikasi Cerdas:</strong> Jika data TR / Part yang sama di-upload ulang, sistem otomatis memperbarui baris data tanpa merusak foto bukti verifikasi yang sudah tersimpan.</p>
-              <p>• <strong>Multi-Part dalam 1 TR:</strong> Jika 1 Nomor TR memiliki beberapa jenis sparepart berbeda (berdasarkan Part Number / Part), sistem menyimpannya sebagai baris terpisah secara rapi.</p>
+            <div className="pt-1.5 border-t border-slate-200 text-[11px] text-slate-600 space-y-1">
+              <p>• <strong>Logika Status Otomatis:</strong></p>
+              <ul className="list-disc list-inside pl-1 space-y-0.5 text-slate-500">
+                <li>Jika kolom <strong>OFP Send to HMMI</strong> terisi tanggal &rarr; status otomatis <span className="text-emerald-700 font-semibold">"Sent to HMMI"</span>.</li>
+                <li>Jika kolom <strong>OFP Receive</strong> terisi tanggal &rarr; status otomatis <span className="text-blue-700 font-semibold">"Received by Area"</span>.</li>
+                <li>Jika kedua kolom tanggal tersebut kosong &rarr; status otomatis <span className="text-amber-700 font-semibold">"Belum Terkirim"</span>.</li>
+              </ul>
+              <p className="pt-1">• <strong>Anti-Duplikasi Cerdas:</strong> Jika data TR / Part yang sama di-upload ulang, sistem otomatis memperbarui baris data tanpa merusak foto bukti verifikasi yang sudah tersimpan.</p>
             </div>
           </div>
 
