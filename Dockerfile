@@ -1,76 +1,32 @@
 # ==============================================================================
-# Dockerfile: Hino OPF Monitoring & Tracking Dashboard (Menggunakan Bun)
+# Dockerfile: Hino OPF Monitoring & Tracking Dashboard (Optimized for Render)
 # ==============================================================================
 
 FROM oven/bun:latest
 
-# Pasang dependensi sistem operasi Linux untuk Chromium & Puppeteer
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    chromium \
-    fonts-liberation \
-    fonts-ipafont-gothic \
-    fonts-wqy-zenhei \
-    fonts-thai-tlwg \
-    fonts-kacst \
-    fonts-freefont-ttf \
-    ca-certificates \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libcairo2 \
-    libcups2 \
-    libdbus-1-3 \
-    libexpat1 \
-    libfontconfig1 \
-    libgbm1 \
-    libglib2.0-0 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libx11-6 \
-    libx11-xcb1 \
-    libxcb1 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxi6 \
-    libxrandr2 \
-    libxrender1 \
-    libxss1 \
-    libxtst6 \
-    xdg-utils \
-    && rm -rf /var/lib/apt/lists/*
-
-# Konfigurasi environment Puppeteer agar menggunakan Chromium sistem
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
-    NODE_ENV=production \
+ENV NODE_ENV=production \
     PORT=3000
 
 WORKDIR /app
 
-# Salin manifest dan lockfile jika ada
+# Salin file konfigurasi dependensi
 COPY package.json ./
 COPY bun.lock* ./
 
-# Install dependensi menggunakan Bun (bebas dari bug edgesOut npm)
+# Install dependensi menggunakan Bun (bebas dari bug npm & apt-get)
 RUN bun install
 
-# Salin seluruh kode aplikasi
+# Salin seluruh kode sumber aplikasi
 COPY . .
 
-# Buat folder data untuk database
+# Buat direktori data untuk penyimpanan lokal jika diperlukan
 RUN mkdir -p /app/data
 
-# Build frontend React menggunakan Bun
+# Build frontend React menggunakan Vite via Bun
 RUN bun run build
 
-# Port fleksibel
+# Buka port untuk Render & platform cloud lainnya
 EXPOSE 3000 7860
 
-# Jalankan server menggunakan Bun
+# Jalankan server aplikasi
 CMD ["bun", "run", "start"]
