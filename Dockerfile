@@ -1,11 +1,5 @@
-# ==============================================================================
-# Dockerfile: Hino OPF Monitoring & Tracking Dashboard
-# Render-safe build with Chromium + Puppeteer headless
-# ==============================================================================
-
 FROM node:20-slim
 
-# Install dependencies for Chromium/Puppeteer on Linux
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
     fonts-liberation \
@@ -48,19 +42,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy dependency manifests first for caching
 COPY package*.json ./
-
-# IMPORTANT: tsx is in devDependencies, so in production builds we must still install dev deps.
 RUN npm cache clean --force && npm install --legacy-peer-deps --include=dev
 
-# Copy source code
 COPY . .
-
-# Prepare SQLite data directory
 RUN mkdir -p /app/data
-
-# Build frontend
 RUN npm run build
 
 ENV NODE_ENV=production \
@@ -68,8 +54,6 @@ ENV NODE_ENV=production \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-# Render uses the PORT env variable; do not hardcode multiple ports here
 EXPOSE 3000
 
-# Run via npm so node_modules/.bin is on PATH and Render can pass PORT correctly
 CMD ["sh", "-c", "npm start -- --host 0.0.0.0 --port ${PORT:-3000}"]
