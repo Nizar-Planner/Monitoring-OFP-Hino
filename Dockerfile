@@ -55,7 +55,9 @@ WORKDIR /app
 
 # Copy dependency manifests first for caching
 COPY package*.json ./
-RUN npm install
+
+# Use legacy peer deps to avoid dependency resolution failure on Render builds
+RUN npm cache clean --force && npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
