@@ -20,17 +20,19 @@ interface DetailModalProps {
   record: OpfRecord | null;
   onClose: () => void;
   onOpenActionModal: (record: OpfRecord) => void;
+  onPrintTag?: (record: OpfRecord) => void;
 }
 
 export const DetailModal: React.FC<DetailModalProps> = ({
   record,
   onClose,
   onOpenActionModal,
+  onPrintTag,
 }) => {
   if (!record) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 no-print">
       <div className="bg-white rounded-2xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Modal Header */}
@@ -40,15 +42,15 @@ export const DetailModal: React.FC<DetailModalProps> = ({
               H
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xs font-semibold text-red-400">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono text-xs font-semibold text-red-400 shrink-0">
                   {record.dtr_number}
                 </span>
-                <span className="text-[11px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono">
+                <span className="text-[11px] bg-slate-800 text-slate-200 px-2 py-0.5 rounded font-mono shrink-0 break-all">
                   {record.qpi_number || 'No QPI'}
                 </span>
                 {record.is_overdue && (
-                  <span className="text-[10px] bg-red-600 text-white font-black px-2 py-0.5 rounded uppercase animate-pulse">
+                  <span className="text-[10px] bg-red-600 text-white font-black px-2 py-0.5 rounded uppercase animate-pulse shrink-0">
                     &gt; 30 HARI (OVERDUE)
                   </span>
                 )}
@@ -60,13 +62,15 @@ export const DetailModal: React.FC<DetailModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => window.print()}
-              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
-              title="Cetak Rincian"
-            >
-              <Printer className="w-4 h-4" />
-            </button>
+            {onPrintTag && (
+              <button
+                onClick={() => onPrintTag(record)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+                title="Cetak Tag Part (Original Failure Part Tag) untuk HMMI"
+              >
+                <span>Cetak Tag Part</span>
+              </button>
+            )}
             <button
               onClick={onClose}
               className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"

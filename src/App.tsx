@@ -8,6 +8,7 @@ import { ManualEntryModal } from './components/ManualEntryModal';
 import { ActionVerificationModal } from './components/ActionVerificationModal';
 import { ExcelUploadModal } from './components/ExcelUploadModal';
 import { DeployGuideModal } from './components/DeployGuideModal';
+import { PrintTagView } from './components/PrintTagView';
 import { OpfRecord, StatsData, ExcelImportResult } from './types';
 import { Truck, AlertTriangle, CheckCircle2, FileSpreadsheet, ShieldAlert, ArrowUpRight, Clock, ShieldCheck, Building } from 'lucide-react';
 
@@ -28,6 +29,8 @@ export default function App() {
   const [isUploadExcelOpen, setIsUploadExcelOpen] = useState(false);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
+  const [isPrintTagOpen, setIsPrintTagOpen] = useState(false);
+  const [tagsToPrint, setTagsToPrint] = useState<OpfRecord[]>([]);
 
   // Toast Notification
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' | 'warning' } | null>(null);
@@ -111,6 +114,16 @@ export default function App() {
     await fetchData();
   };
 
+  // Open Print Tag View Modal
+  const handleOpenPrintTags = (selected: OpfRecord[]) => {
+    if (!selected || selected.length === 0) {
+      showToast('Pilih minimal satu data part di tabel untuk mencetak tag!', 'warning');
+      return;
+    }
+    setTagsToPrint(selected);
+    setIsPrintTagOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-slate-100/70 text-slate-900 font-sans antialiased">
       
@@ -168,7 +181,7 @@ export default function App() {
                 <Truck className="w-4 h-4" />
                 <span>PT HINO MOTORS SALES INDONESIA (HMSI)</span>
                 <span>·</span>
-                <span className="text-slate-300">DIVISI QUALITY ASSURANCE</span>
+                <span className="text-slate-300">HMSI-FIELD QUALITY</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
                 Sistem Monitoring &amp; Tracking Part OFP (Dealer &rarr; HMSI &rarr; HMMI/HML)
@@ -262,6 +275,7 @@ export default function App() {
             setStatusFilter={setStatusFilter}
             isOverdueFilterActive={isOverdueFilterActive}
             setIsOverdueFilterActive={setIsOverdueFilterActive}
+            onPrintTags={handleOpenPrintTags}
           />
         </div>
 
@@ -296,6 +310,7 @@ export default function App() {
           setSelectedRecord(null);
           setActionRecord(rec);
         }}
+        onPrintTag={(rec) => handleOpenPrintTags([rec])}
       />
 
       {/* MODAL 2: Action & Verification Modal (Tim Area & Tim Quality) */}
@@ -326,6 +341,16 @@ export default function App() {
       <DeployGuideModal
         isOpen={isGuideModalOpen}
         onClose={() => setIsGuideModalOpen(false)}
+      />
+
+      {/* MODAL 6: Original Failure Part Tag Print Preview & Sheet */}
+      <PrintTagView
+        isOpen={isPrintTagOpen}
+        onClose={() => setIsPrintTagOpen(false)}
+        selectedRecords={tagsToPrint}
+        onRemoveRecord={(key) =>
+          setTagsToPrint((prev) => prev.filter((r) => (r.id ? r.id !== key : r.dtr_number !== key)))
+        }
       />
 
     </div>

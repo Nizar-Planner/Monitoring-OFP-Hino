@@ -189,13 +189,13 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
         {/* Header */}
         <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-bold text-red-400">{record.dtr_number}</span>
-              <span className="text-[11px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-mono text-xs font-bold text-red-400 shrink-0">{record.dtr_number}</span>
+              <span className="text-[11px] bg-slate-800 text-slate-200 px-2 py-0.5 rounded font-mono shrink-0 break-all">
                 {record.qpi_number || 'No QPI'}
               </span>
               {record.is_overdue && (
-                <span className="text-[10px] bg-red-600 text-white font-bold px-2 py-0.5 rounded animate-pulse">
+                <span className="text-[10px] bg-red-600 text-white font-bold px-2 py-0.5 rounded animate-pulse shrink-0">
                   OVERDUE &gt; 30 HARI
                 </span>
               )}

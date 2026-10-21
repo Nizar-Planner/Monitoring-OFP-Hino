@@ -40,6 +40,12 @@ export interface OpfRecord {
   shipping_resi?: string;
   shipping_carrier?: string;
 
+  // OFP Tag specific fields
+  problem?: string;
+  pos?: string;
+  occurred_date?: string | null;
+  repair_date?: string | null;
+
   // Calculated metrics
   days_elapsed?: number;
   is_overdue?: boolean; // > 30 days and not delivered
