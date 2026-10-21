@@ -46,18 +46,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
-ENV NODE_ENV=production \
-    PORT=3000 \
-    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-
 WORKDIR /app
 
 # Copy dependency manifests first for caching
 COPY package*.json ./
 
-# Use legacy peer deps to avoid dependency resolution failure on Render builds
-RUN npm cache clean --force && npm install --legacy-peer-deps
+# IMPORTANT: tsx is in devDependencies, so in production builds we must still install dev deps.
+RUN npm cache clean --force && npm install --legacy-peer-deps --include=dev
 
 # Copy source code
 COPY . .
@@ -67,6 +62,11 @@ RUN mkdir -p /app/data
 
 # Build frontend
 RUN npm run build
+
+ENV NODE_ENV=production \
+    PORT=3000 \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Render uses the PORT env variable; do not hardcode multiple ports here
 EXPOSE 3000
