@@ -1,10 +1,11 @@
 # ==============================================================================
-# Dockerfile: Hino OPF Monitoring & Tracking Dashboard (Menggunakan Bun)
+# Dockerfile: Hino OPF Monitoring & Tracking Dashboard
+# Render-safe build with Chromium + Puppeteer headless
 # ==============================================================================
 
-FROM oven/bun:latest
+FROM node:20-slim
 
-# Pasang dependensi sistem operasi Linux untuk Chromium & Puppeteer
+# Install dependencies for Chromium/Puppeteer on Linux
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
     fonts-liberation \
@@ -45,32 +46,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
-# Konfigurasi environment Puppeteer agar menggunakan Chromium sistem
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
-    NODE_ENV=production \
-    PORT=3000
+ENV NODE_ENV=production \
+    PORT=3000 \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
-# Salin manifest dan lockfile jika ada
-COPY package.json ./
-COPY bun.lock* ./
+# Copy dependency manifests first for caching
+COPY package*.json ./
+RUN npm install
 
-# Install dependensi menggunakan Bun (bebas dari bug edgesOut npm)
-RUN bun install
-
-# Salin seluruh kode aplikasi
+# Copy source code
 COPY . .
 
-# Buat folder data untuk database
+# Prepare SQLite data directory
 RUN mkdir -p /app/data
 
-# Build frontend React menggunakan Bun
-RUN bun run build
+# Build frontend
+RUN npm run build
 
-# Port fleksibel
-EXPOSE 3000 7860
+# Render uses the PORT env variable; do not hardcode multiple ports here
+EXPOSE 3000
 
-# Jalankan server menggunakan Bun
-CMD ["bun", "run", "start"]
+# Run Express app on 0.0.0.0 and use Render's assigned PORT
+CMD ["sh", "-c", "tsx server.ts --host 0.0.0.0 --port ${PORT:-3000}"]
