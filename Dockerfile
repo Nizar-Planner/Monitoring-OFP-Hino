@@ -58,7 +58,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependensi (termasuk tsx untuk runtime)
-RUN npm install
+RUN npm install --no-package-lock
 
 # Salin seluruh kode aplikasi
 COPY . .
