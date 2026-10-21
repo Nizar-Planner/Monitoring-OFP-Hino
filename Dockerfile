@@ -1,32 +1,27 @@
-# ==============================================================================
-# Dockerfile: Hino OPF Monitoring & Tracking Dashboard (Optimized for Render)
-# ==============================================================================
+FROM oven/bun:1.2-debian
 
-FROM oven/bun:latest
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium \
+    fonts-liberation \
+    fonts-freefont-ttf \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-ENV NODE_ENV=production \
-    PORT=3000
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
-# Salin file konfigurasi dependensi
 COPY package.json ./
-COPY bun.lock* ./
-
-# Install dependensi menggunakan Bun (bebas dari bug npm & apt-get)
+COPY bun.lock* bun.lockb* ./
 RUN bun install
 
-# Salin seluruh kode sumber aplikasi
 COPY . .
-
-# Buat direktori data untuk penyimpanan lokal jika diperlukan
 RUN mkdir -p /app/data
 
-# Build frontend React menggunakan Vite via Bun
+# Build dulu, baru set production
 RUN bun run build
+ENV NODE_ENV=production
 
-# Buka port untuk Render & platform cloud lainnya
-EXPOSE 3000 7860
-
-# Jalankan server aplikasi
+EXPOSE 10000
 CMD ["bun", "run", "start"]
