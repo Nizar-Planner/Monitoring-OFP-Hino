@@ -71,5 +71,5 @@ RUN npm run build
 # Render uses the PORT env variable; do not hardcode multiple ports here
 EXPOSE 3000
 
-# Run Express app on 0.0.0.0 and use Render's assigned PORT
-CMD ["sh", "-c", "tsx server.ts --host 0.0.0.0 --port ${PORT:-3000}"]
+# Run via npm so node_modules/.bin is on PATH and Render can pass PORT correctly
+CMD ["sh", "-c", "npm start -- --host 0.0.0.0 --port ${PORT:-3000}"]
