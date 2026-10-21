@@ -1,9 +1,8 @@
 # ==============================================================================
-# Dockerfile: Hino OPF Monitoring & Tracking Dashboard
-# Dioptimalkan untuk Render.com (Free Tier) dengan Chromium & Puppeteer Headless
+# Dockerfile: Hino OPF Monitoring & Tracking Dashboard (Menggunakan Bun)
 # ==============================================================================
 
-FROM node:20-slim
+FROM oven/bun:latest
 
 # Pasang dependensi sistem operasi Linux untuk Chromium & Puppeteer
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -54,31 +53,24 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 
 WORKDIR /app
 
-# Salin package manifest
-COPY package*.json ./
+# Salin manifest dan lockfile jika ada
+COPY package.json ./
+COPY bun.lock* ./
 
-# Bersihkan cache npm lalu install dependensi tanpa meng-upgrade npm global
-RUN npm cache clean --force
-RUN npm install --legacy-peer-deps --no-package-lock
+# Install dependensi menggunakan Bun (bebas dari bug edgesOut npm)
+RUN bun install
 
 # Salin seluruh kode aplikasi
 COPY . .
 
-# Buat folder data untuk penyimpanan database SQLite file
+# Buat folder data untuk database
 RUN mkdir -p /app/data
 
-# Build frontend React menggunakan Vite
-RUN npm run build
+# Build frontend React menggunakan Bun
+RUN bun run build
 
-# Buat non-root user (UID 1000 standar untuk Hugging Face Spaces, Koyeb, dan Render)
-RUN useradd -m -u 1000 user && \
-    mkdir -p /app/data && \
-    chown -R user:user /app
-
-USER user
-
-# Port fleksibel (3000 untuk Render/Koyeb, 7860 untuk Hugging Face Spaces)
+# Port fleksibel
 EXPOSE 3000 7860
 
-# Jalankan server Express full-stack
-CMD ["npm", "start"]
+# Jalankan server menggunakan Bun
+CMD ["bun", "run", "start"]
