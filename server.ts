@@ -32,9 +32,16 @@ process.env.DISABLE_HMR = 'true';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+function getArg(flag: string): string | undefined {
+  const index = process.argv.indexOf(flag);
+  return index !== -1 && index + 1 < process.argv.length ? process.argv[index + 1] : undefined;
+}
+
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
-const PORT = !isProduction ? 3000 : (Number(process.env.PORT) || (process.env.SPACE_ID ? 7860 : 3000));
+const argPort = getArg('--port');
+const PORT = argPort ? Number(argPort) : (Number(process.env.PORT) || (process.env.SPACE_ID ? 7860 : 3000));
+const HOST = getArg('--host') || '0.0.0.0';
 
 // Increase payload limit for base64 photo uploads from mobile camera
 app.use(express.json({ limit: '50mb' }));
@@ -429,6 +436,7 @@ async function startServer() {
       server: {
         middlewareMode: true,
         hmr: false,
+        watch: null,
       },
       appType: 'spa',
     });
@@ -454,9 +462,9 @@ async function startServer() {
     console.log('[PROD] Serving static production build dari dist.');
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  app.listen(PORT, HOST, () => {
     console.log(`=============================================================`);
-    console.log(`🚚 Hino OFP Tracker (HMSI -> HMMI/HML) aktif di http://0.0.0.0:${PORT}`);
+    console.log(`🚚 Hino OFP Tracker (HMSI -> HMMI/HML) aktif di http://${HOST}:${PORT}`);
     console.log(`=============================================================`);
   });
 }
