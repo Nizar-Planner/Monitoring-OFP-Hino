@@ -58,6 +58,11 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependensi (termasuk tsx untuk runtime)
+# Update npm ke versi terbaru untuk mengatasi bug edgesOut
+RUN npm install -g npm@latest
+
+# Bersihkan cache npm lalu install
+RUN npm cache clean --force
 RUN npm install --no-package-lock
 
 # Salin seluruh kode aplikasi
