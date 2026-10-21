@@ -1,13 +1,13 @@
 import initSqlJs, { Database, SqlValue } from 'sql.js';
 import fs from 'fs';
 import path from 'path';
-import { OpfRecord, StatsData, TrackingStatus, ExcelImportResult } from '../types.js';
+import { OpfRecord, StatsData, TrackingStatus, ExcelImportResult } from '../types.ts';
 import {
   getSupabaseClient,
   isSupabaseConfigured,
   uploadPhotoToSupabase,
   SUPABASE_STORAGE_BUCKET
-} from '../lib/supabase.js';
+} from '../lib/supabase.ts';
 
 export type { OpfRecord, StatsData, TrackingStatus, ExcelImportResult };
 
@@ -15,16 +15,10 @@ let dbInstance: Database | null = null;
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 const DB_PATH = path.join(DATA_DIR, 'opf_database.sqlite');
 
-/**
- * Indicates whether Supabase PostgreSQL is actively being used
- */
 export function isUsingSupabase(): boolean {
   return isSupabaseConfigured() && getSupabaseClient() !== null;
 }
 
-/**
- * Calculates lead time elapsed in days from request date to today or shipped date
- */
 export function calculateDaysElapsed(requestDateStr: string, shippedDateStr?: string | null): number {
   if (!requestDateStr) return 0;
   const start = new Date(requestDateStr).getTime();
@@ -37,15 +31,8 @@ export function calculateDaysElapsed(requestDateStr: string, shippedDateStr?: st
   return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
 
-// ============================================================================
-// SQLite In-Memory / Local Storage Fallback Engine
-// (Ensures zero-downtime when Supabase credentials are pending or offline)
-// ============================================================================
-
 export async function getDb(): Promise<Database> {
-  if (dbInstance) {
-    return dbInstance;
-  }
+  if (dbInstance) return dbInstance;
 
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -66,6 +53,7 @@ export async function getDb(): Promise<Database> {
   }
 
   createLocalTables(dbInstance);
+  ensureSqliteColumns(dbInstance);
   seedInitialData(dbInstance);
   saveDb();
   return dbInstance;
@@ -79,6 +67,32 @@ export function saveDb(): void {
     fs.writeFileSync(DB_PATH, buffer);
   } catch (err) {
     console.error('Failed to save SQLite database to disk:', err);
+  }
+}
+
+function ensureSqliteColumns(db: Database): void {
+  const info = db.exec('PRAGMA table_info(opf_records)');
+  const columns = new Set<string>();
+
+  if (info.length > 0) {
+    for (const row of info[0].values) {
+      columns.add(String(row[1]));
+    }
+  }
+
+  const migrations: Array<{ name: string; sql: string }> = [
+    { name: 'part_number', sql: "ALTER TABLE opf_records ADD COLUMN part_number TEXT DEFAULT ''" },
+    { name: 'judgement_date', sql: "ALTER TABLE opf_records ADD COLUMN judgement_date TEXT DEFAULT NULL" },
+  ];
+
+  for (const item of migrations) {
+    if (!columns.has(item.name)) {
+      try {
+        db.run(item.sql);
+      } catch (_err) {
+        // ignore if already exists
+      }
+    }
   }
 }
 
@@ -100,35 +114,23 @@ function createLocalTables(db: Database): void {
       judgement_date TEXT DEFAULT NULL,
       request_date TEXT NOT NULL,
       tracking_status TEXT NOT NULL DEFAULT 'Waiting OFP',
-      
       area_received_date TEXT DEFAULT NULL,
       area_received_by TEXT DEFAULT '',
       area_photo TEXT DEFAULT '',
       area_notes TEXT DEFAULT '',
-
       quality_checked_date TEXT DEFAULT NULL,
       quality_checked_by TEXT DEFAULT '',
       quality_photo TEXT DEFAULT '',
       quality_notes TEXT DEFAULT '',
-
       shipped_date TEXT DEFAULT NULL,
       shipping_resi TEXT DEFAULT '',
       shipping_carrier TEXT DEFAULT '',
-
       days_elapsed INTEGER DEFAULT 0,
       is_overdue INTEGER DEFAULT 0,
-
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
-
-  try {
-    db.run("ALTER TABLE opf_records ADD COLUMN part_number TEXT DEFAULT ''");
-  } catch (_e) {}
-  try {
-    db.run("ALTER TABLE opf_records ADD COLUMN judgement_date TEXT DEFAULT NULL");
-  } catch (_e) {}
 
   db.run(`CREATE INDEX IF NOT EXISTS idx_dtr_part ON opf_records (dtr_number, part_name);`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_dtr_part_no ON opf_records (dtr_number, part_number);`);
@@ -136,7 +138,7 @@ function createLocalTables(db: Database): void {
 
 function seedInitialData(db: Database): void {
   const result = db.exec('SELECT COUNT(*) as count FROM opf_records');
-  const count = (result.length > 0 && result[0].values.length > 0) ? (result[0].values[0][0] as number) : 0;
+  const count = (result.length > 0 && result[0].values.length > 0) ? Number(result[0].values[0][0]) : 0;
 
   if (count > 0) return;
 
@@ -157,128 +159,6 @@ function seedInitialData(db: Database): void {
       request_date: '2026-09-08',
       tracking_status: 'Waiting OFP',
       area_notes: 'Part belum dikirimkan dari gudang dealer Medan, sudah di-follow up berkali-kali.',
-    },
-    {
-      dtr_number: 'DTR-2026-BPP-0021',
-      part_name: 'Common Rail High Pressure Pump',
-      part_number: '22100-E0020',
-      quantity: 1,
-      model: 'Hino 500 FM 350 TH (Tractor Head)',
-      chassis_number: 'MHFJ1JTHMK001092',
-      engine_number: 'P11C-VP10922',
-      mileage: 72100,
-      dealer_name: 'PT Hibaindah Armada Motor - Balikpapan',
-      qpi_number: 'QPI-HMSI-26-0344',
-      judgement_qpi: 'Waiting Physical Sample',
-      judgement_date: '2026-09-12',
-      request_date: '2026-09-12',
-      tracking_status: 'Waiting OFP',
-      area_notes: 'Dealer terkendala ekspedisi laut dari Kalimantan.',
-    },
-    {
-      dtr_number: 'DTR-2026-SBY-0094',
-      part_name: 'Leaf Spring Rear No. 1',
-      part_number: '48201-3820',
-      quantity: 2,
-      model: 'Hino 500 FL 260 JW (6x2 Cargo)',
-      chassis_number: 'MHFJ1JGCMK018432',
-      engine_number: 'J08E-WD31089',
-      mileage: 48900,
-      dealer_name: 'PT Indomobil Prima Niaga - Surabaya',
-      qpi_number: 'QPI-HMSI-26-0388',
-      judgement_qpi: 'Metallurgical Review',
-      judgement_date: '2026-09-15',
-      request_date: '2026-09-15',
-      tracking_status: 'Not yet shipped',
-      area_received_date: '2026-10-02',
-      area_received_by: 'Budi Santoso (Tim Area Jatim)',
-      area_photo: '/src/assets/images/hino_engine_part_1792158559395.jpg',
-      area_notes: 'Part per daun patah sudah diterima di HMSI Jakarta, menunggu Tim Quality kirim ke HMMI.',
-      quality_checked_date: '2026-10-06',
-      quality_checked_by: 'Andi Wijaya (QA HMSI)',
-      quality_photo: '/src/assets/images/hino_engine_part_1792158559395.jpg',
-      quality_notes: 'Kondisi part bersih, tag DTR nomor lengkap terpasang.',
-    },
-    {
-      dtr_number: 'DTR-2026-JKT-0041',
-      part_name: 'Clutch Booster Assembly',
-      part_number: '31470-1380',
-      quantity: 1,
-      model: 'Hino 500 FM 260 JD (6x4)',
-      chassis_number: 'MHFJ1JGBMK002491',
-      engine_number: 'J08E-WD28412',
-      mileage: 38200,
-      dealer_name: 'PT Duta Cemerlang Motors - Jakarta Barat',
-      qpi_number: 'QPI-HMSI-26-0410',
-      judgement_qpi: 'Leakage Analysis',
-      judgement_date: '2026-09-16',
-      request_date: '2026-09-16',
-      tracking_status: 'Waiting OFP',
-      area_notes: 'Dealer sedang membongkar unit pengganti.',
-    },
-    {
-      dtr_number: 'DTR-2026-BDG-0072',
-      part_name: 'King Pin & Bushing Set',
-      part_number: '04431-36010',
-      quantity: 2,
-      model: 'Hino Dutro 300 130 HD (4x2)',
-      chassis_number: 'MHFW1JGAMK011044',
-      engine_number: 'W04D-TN99214',
-      mileage: 29400,
-      dealer_name: 'PT Maya Graha Indah - Bandung',
-      qpi_number: 'QPI-HMSI-26-0429',
-      judgement_qpi: 'Knuckle Clearance Check',
-      judgement_date: '2026-09-18',
-      request_date: '2026-09-18',
-      tracking_status: 'Waiting OFP',
-      area_notes: 'Dealer menginformasikan part siap diambil oleh tim ekspedisi.',
-    },
-    {
-      dtr_number: 'DTR-2026-SMG-0033',
-      part_name: 'Water Pump Assembly',
-      part_number: '16100-78120',
-      quantity: 1,
-      model: 'Hino Dutro 300 110 SDB (Microbus)',
-      chassis_number: 'MHFW1JSBMK008122',
-      engine_number: 'W04D-TM11094',
-      mileage: 34100,
-      dealer_name: 'PT Duta Cemerlang Motors - Semarang',
-      qpi_number: 'QPI-HMSI-26-0489',
-      judgement_qpi: 'Seal Mechanical Check',
-      judgement_date: '2026-10-04',
-      request_date: '2026-10-04',
-      tracking_status: 'Not yet shipped',
-      area_received_date: '2026-10-12',
-      area_received_by: 'Eko Prasetyo (Tim Area Jateng)',
-      area_photo: '/src/assets/images/hino_engine_part_1792158559395.jpg',
-      area_notes: 'Diterima di gudang transit HMSI Jakarta dalam packing kardus kayu aman.',
-      quality_checked_date: null,
-    },
-    {
-      dtr_number: 'DTR-2026-MKS-0056',
-      part_name: 'Brake Chamber Rear Diaphragm',
-      part_number: '44540-1080',
-      quantity: 2,
-      model: 'Hino Dutro 300 130 HD (4x2 Dump)',
-      chassis_number: 'MHFW1JGAMK022091',
-      engine_number: 'W04D-TN84910',
-      mileage: 18400,
-      dealer_name: 'PT Kumala Motor Sejahtera - Makassar',
-      qpi_number: 'QPI-HMSI-26-0512',
-      judgement_qpi: 'Approved Warranty',
-      judgement_date: '2026-09-25',
-      request_date: '2026-09-25',
-      tracking_status: 'Delivered',
-      area_received_date: '2026-10-02',
-      area_received_by: 'Reza Fahlevi (Tim Area Sulsel)',
-      area_photo: '/src/assets/images/hino_engine_part_1792158559395.jpg',
-      quality_checked_date: '2026-10-04',
-      quality_checked_by: 'Bambang Irawan (QA HMSI)',
-      quality_photo: '/src/assets/images/hino_engine_part_1792158559395.jpg',
-      shipped_date: '2026-10-08',
-      shipping_resi: 'SJ-HMSI-HMMI-26-1044',
-      shipping_carrier: 'Internal Shuttle Truck HMSI to Plant HMMI Purwakarta',
-      quality_notes: 'Diserahkan langsung ke Tim QA Plant HMMI Kawasan Industri Kota Bukit Indah.',
     }
   ];
 
@@ -321,4 +201,341 @@ function seedInitialData(db: Database): void {
       ]
     );
   }
+}
+
+export async function getAllOpfRecords(query = '', statusFilter = 'all', overdueOnly = false): Promise<OpfRecord[]> {
+  const db = await getDb();
+  let sql = 'SELECT * FROM opf_records WHERE 1=1';
+  const params: SqlValue[] = [];
+
+  if (query.trim()) {
+    const q = `%${query.trim()}%`;
+    sql += ` AND (dtr_number LIKE ?
+              OR part_name LIKE ?
+              OR part_number LIKE ?
+              OR model LIKE ?
+              OR chassis_number LIKE ?
+              OR engine_number LIKE ?
+              OR dealer_name LIKE ?
+              OR qpi_number LIKE ?
+              OR judgement_qpi LIKE ?)`;
+    params.push(q, q, q, q, q, q, q, q, q);
+  }
+
+  if (statusFilter && statusFilter !== 'all') {
+    sql += ` AND tracking_status = ?`;
+    params.push(statusFilter);
+  }
+
+  if (overdueOnly) {
+    sql += ` AND is_overdue = 1`;
+  }
+
+  sql += ' ORDER BY is_overdue DESC, days_elapsed DESC, id DESC';
+
+  const stmt = db.prepare(sql);
+  if (params.length > 0) stmt.bind(params);
+
+  const records: OpfRecord[] = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject() as unknown as OpfRecord;
+    const days = calculateDaysElapsed(row.request_date, row.shipped_date);
+    row.days_elapsed = days;
+    row.is_overdue = days > 30 && row.tracking_status !== 'Delivered' && row.tracking_status !== 'Sent to HMMI';
+    records.push(row);
+  }
+  stmt.free();
+
+  return records;
+}
+
+export async function getOpfById(id: number): Promise<OpfRecord | null> {
+  const db = await getDb();
+  const stmt = db.prepare('SELECT * FROM opf_records WHERE id = ?');
+  stmt.bind([id]);
+  if (stmt.step()) {
+    const row = stmt.getAsObject() as unknown as OpfRecord;
+    row.days_elapsed = calculateDaysElapsed(row.request_date, row.shipped_date);
+    row.is_overdue = row.days_elapsed > 30 && row.tracking_status !== 'Delivered' && row.tracking_status !== 'Sent to HMMI';
+    stmt.free();
+    return row;
+  }
+  stmt.free();
+  return null;
+}
+
+async function processPhotosForRecord(record: Partial<OpfRecord>): Promise<void> {
+  if (record.area_photo && record.area_photo.startsWith('data:')) {
+    const res = await uploadPhotoToSupabase(record.area_photo, `area_${record.dtr_number || 'part'}`);
+    if (res.success && res.publicUrl) record.area_photo = res.publicUrl;
+  }
+  if (record.quality_photo && record.quality_photo.startsWith('data:')) {
+    const res = await uploadPhotoToSupabase(record.quality_photo, `quality_${record.dtr_number || 'part'}`);
+    if (res.success && res.publicUrl) record.quality_photo = res.publicUrl;
+  }
+}
+
+export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boolean; id: number }> {
+  await processPhotosForRecord(record);
+  const db = await getDb();
+  const days = calculateDaysElapsed(record.request_date, record.shipped_date);
+  const isOverdue = days > 30 && record.tracking_status !== 'Delivered' && record.tracking_status !== 'Sent to HMMI';
+  const partNum = (record.part_number || '').trim();
+
+  let checkStmt;
+  if (partNum) {
+    checkStmt = db.prepare('SELECT * FROM opf_records WHERE dtr_number = ? AND part_number = ? AND part_name = ?');
+    checkStmt.bind([record.dtr_number, partNum, record.part_name]);
+  } else {
+    checkStmt = db.prepare('SELECT * FROM opf_records WHERE dtr_number = ? AND part_name = ?');
+    checkStmt.bind([record.dtr_number, record.part_name]);
+  }
+
+  const exists = checkStmt.step();
+  let existing: any = null;
+  if (exists) existing = checkStmt.getAsObject();
+  checkStmt.free();
+
+  if (existing && existing.id) {
+    db.run(
+      `UPDATE opf_records SET part_name = ?, part_number = ?, quantity = ?, model = ?, chassis_number = ?, engine_number = ?, mileage = ?, dealer_name = ?, qpi_number = ?, judgement_qpi = ?, judgement_date = ?, request_date = ?, tracking_status = ?, area_received_date = ?, area_received_by = ?, area_photo = ?, area_notes = ?, quality_checked_date = ?, quality_checked_by = ?, quality_photo = ?, quality_notes = ?, shipped_date = ?, shipping_resi = ?, shipping_carrier = ?, days_elapsed = ?, is_overdue = ?, updated_at = datetime('now') WHERE id = ?`,
+      [
+        record.part_name,
+        partNum,
+        record.quantity || 1,
+        record.model,
+        record.chassis_number,
+        record.engine_number,
+        record.mileage,
+        record.dealer_name,
+        record.qpi_number || '',
+        record.judgement_qpi || '',
+        record.judgement_date || null,
+        record.request_date,
+        record.tracking_status || existing.tracking_status,
+        record.area_received_date ?? existing.area_received_date,
+        record.area_received_by ?? existing.area_received_by,
+        record.area_photo ?? existing.area_photo,
+        record.area_notes ?? existing.area_notes,
+        record.quality_checked_date ?? existing.quality_checked_date,
+        record.quality_checked_by ?? existing.quality_checked_by,
+        record.quality_photo ?? existing.quality_photo,
+        record.quality_notes ?? existing.quality_notes,
+        record.shipped_date ?? existing.shipped_date,
+        record.shipping_resi ?? existing.shipping_resi,
+        record.shipping_carrier ?? existing.shipping_carrier,
+        days,
+        isOverdue,
+        existing.id
+      ]
+    );
+    return { isNew: false, id: Number(existing.id) };
+  }
+
+  db.run(
+    `INSERT INTO opf_records (dtr_number, part_name, part_number, quantity, model, chassis_number, engine_number, mileage, dealer_name, qpi_number, judgement_qpi, judgement_date, request_date, tracking_status, area_received_date, area_received_by, area_photo, area_notes, quality_checked_date, quality_checked_by, quality_photo, quality_notes, shipped_date, shipping_resi, shipping_carrier, days_elapsed, is_overdue) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
+    [
+      record.dtr_number,
+      record.part_name,
+      partNum,
+      record.quantity || 1,
+      record.model,
+      record.chassis_number,
+      record.engine_number,
+      record.mileage,
+      record.dealer_name,
+      record.qpi_number || '',
+      record.judgement_qpi || '',
+      record.judgement_date || null,
+      record.request_date || new Date().toISOString().split('T')[0],
+      record.tracking_status || 'Waiting OFP',
+      record.area_received_date || null,
+      record.area_received_by || '',
+      record.area_photo || '',
+      record.area_notes || '',
+      record.quality_checked_date || null,
+      record.quality_checked_by || '',
+      record.quality_photo || '',
+      record.quality_notes || '',
+      record.shipped_date || null,
+      record.shipping_resi || '',
+      record.shipping_carrier || '',
+      days,
+      isOverdue,
+    ]
+  );
+
+  const lastIdRes = db.exec('SELECT last_insert_rowid() as id');
+  const newId = Number(lastIdRes[0].values[0][0]);
+  return { isNew: true, id: newId };
+}
+
+export async function bulkInsertOrUpdateOpf(records: OpfRecord[]): Promise<ExcelImportResult> {
+  const db = await getDb();
+  let totalRowsProcessed = 0;
+  let recordsInserted = 0;
+  let recordsUpdated = 0;
+  const errors: string[] = [];
+
+  db.run('BEGIN TRANSACTION');
+  try {
+    for (let i = 0; i < records.length; i++) {
+      const record = records[i];
+      try {
+        const res = await insertOrUpdateOpf(record);
+        totalRowsProcessed++;
+        if (res.isNew) recordsInserted++; else recordsUpdated++;
+      } catch (err: any) {
+        errors.push(`Baris ${i + 1} (${record.dtr_number || 'N/A'}): ${err.message || 'Gagal menyimpan'}`);
+      }
+    }
+    db.run('COMMIT');
+    saveDb();
+  } catch (err: any) {
+    try { db.run('ROLLBACK'); } catch (_rb) {}
+    console.error('Bulk transaction error:', err);
+    throw err;
+  }
+
+  return { totalRowsProcessed, recordsInserted, recordsUpdated, errors };
+}
+
+export async function updateAreaReceipt(id: number, data: {
+  area_received_by: string;
+  area_photo?: string;
+  area_notes?: string;
+  received_date?: string;
+}): Promise<boolean> {
+  const date = data.received_date || new Date().toISOString().split('T')[0];
+  let photoUrl = data.area_photo || '';
+  if (photoUrl && photoUrl.startsWith('data:')) {
+    const uploadRes = await uploadPhotoToSupabase(photoUrl, `area_receipt_${id}`);
+    if (uploadRes.success && uploadRes.publicUrl) photoUrl = uploadRes.publicUrl;
+  }
+
+  const db = await getDb();
+  db.run(
+    `UPDATE opf_records SET area_received_date = ?, area_received_by = ?, area_photo = COALESCE(NULLIF(?, ''), area_photo), area_notes = ?, tracking_status = 'Not yet shipped', updated_at = datetime('now') WHERE id = ?`,
+    [date, data.area_received_by, photoUrl, data.area_notes || '', id]
+  );
+  saveDb();
+  return true;
+}
+
+export async function updateQualityInspection(id: number, data: {
+  quality_checked_by: string;
+  quality_photo?: string;
+  quality_notes?: string;
+  quality_date?: string;
+}): Promise<boolean> {
+  const date = data.quality_date || new Date().toISOString().split('T')[0];
+  let photoUrl = data.quality_photo || '';
+  if (photoUrl && photoUrl.startsWith('data:')) {
+    const uploadRes = await uploadPhotoToSupabase(photoUrl, `quality_check_${id}`);
+    if (uploadRes.success && uploadRes.publicUrl) photoUrl = uploadRes.publicUrl;
+  }
+
+  const db = await getDb();
+  db.run(
+    `UPDATE opf_records SET quality_checked_date = ?, quality_checked_by = ?, quality_photo = COALESCE(NULLIF(?, ''), quality_photo), quality_notes = ?, updated_at = datetime('now') WHERE id = ?`,
+    [date, data.quality_checked_by, photoUrl, data.quality_notes || '', id]
+  );
+  saveDb();
+  return true;
+}
+
+export async function updateDeliveryToHmmi(id: number, data: {
+  shipped_date: string;
+  shipping_resi: string;
+  shipping_carrier?: string;
+}): Promise<boolean> {
+  const rec = await getOpfById(id);
+  const days = rec ? calculateDaysElapsed(rec.request_date, data.shipped_date) : 0;
+  const db = await getDb();
+  db.run(
+    `UPDATE opf_records SET shipped_date = ?, shipping_resi = ?, shipping_carrier = ?, tracking_status = 'Delivered', days_elapsed = ?, is_overdue = 0, updated_at = datetime('now') WHERE id = ?`,
+    [data.shipped_date, data.shipping_resi, data.shipping_carrier || '', days, id]
+  );
+  saveDb();
+  return true;
+}
+
+export async function deleteOpfRecord(id: number): Promise<boolean> {
+  const db = await getDb();
+  db.run('DELETE FROM opf_records WHERE id = ?', [id]);
+  saveDb();
+  return true;
+}
+
+export async function getOpfStats(): Promise<StatsData> {
+  const records = await getAllOpfRecords('');
+
+  let waitingOfp = 0;
+  let notYetShipped = 0;
+  let delivered = 0;
+  let overdueCount = 0;
+  let pendingQualityVerificationCount = 0;
+
+  const overdueMap = new Map<string, { count: number; maxDays: number; totalDays: number }>();
+  const modelMap = new Map<string, number>();
+  const dealerMap = new Map<string, { count: number; overdueCount: number }>();
+
+  for (const r of records) {
+    if (r.tracking_status === 'Waiting OFP' || r.tracking_status === 'Belum Terkirim') waitingOfp++;
+    else if (r.tracking_status === 'Not yet shipped' || r.tracking_status === 'Received by Area') notYetShipped++;
+    else if (r.tracking_status === 'Delivered' || r.tracking_status === 'Sent to HMMI') delivered++;
+
+    if (r.is_overdue) {
+      overdueCount++;
+      const current = overdueMap.get(r.part_name) || { count: 0, maxDays: 0, totalDays: 0 };
+      current.count += (r.quantity || 1);
+      current.maxDays = Math.max(current.maxDays, r.days_elapsed || 0);
+      current.totalDays += (r.days_elapsed || 0);
+      overdueMap.set(r.part_name, current);
+    }
+
+    if (r.area_received_date && !r.quality_checked_date && r.tracking_status !== 'Delivered' && r.tracking_status !== 'Sent to HMMI') {
+      pendingQualityVerificationCount++;
+    }
+
+    if (r.model) {
+      modelMap.set(r.model, (modelMap.get(r.model) || 0) + 1);
+    }
+
+    if (r.dealer_name) {
+      const d = dealerMap.get(r.dealer_name) || { count: 0, overdueCount: 0 };
+      d.count++;
+      if (r.is_overdue) d.overdueCount++;
+      dealerMap.set(r.dealer_name, d);
+    }
+  }
+
+  const topOverdueParts = Array.from(overdueMap.entries())
+    .map(([name, data]) => ({ name, overdueCount: data.count, maxDays: data.maxDays, avgDays: Math.round(data.totalDays / data.count) }))
+    .sort((a, b) => b.overdueCount - a.overdueCount || b.maxDays - a.maxDays)
+    .slice(0, 5);
+
+  const modelDistribution = Array.from(modelMap.entries())
+    .map(([model, count]) => ({ model, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  const dealerDistribution = Array.from(dealerMap.entries())
+    .map(([dealer, data]) => ({ dealer, count: data.count, overdueCount: data.overdueCount }))
+    .sort((a, b) => b.overdueCount - a.overdueCount || b.count - a.count)
+    .slice(0, 5);
+
+  return {
+    totalRecords: records.length,
+    statusCounts: {
+      waitingOfp,
+      notYetShipped,
+      delivered,
+      overdueCount,
+    },
+    topOverdueParts,
+    modelDistribution,
+    dealerDistribution,
+    pendingQualityVerificationCount,
+  };
 }
