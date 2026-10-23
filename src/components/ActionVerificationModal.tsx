@@ -47,6 +47,7 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
   );
   const [qualityPhoto, setQualityPhoto] = useState(record.quality_photo || '');
   const [qualityNotes, setQualityNotes] = useState(record.quality_notes || '');
+  const [qualityPos, setQualityPos] = useState(record.pos || '');
 
   // Shipping to HMMI/HML State
   const [shippedDate, setShippedDate] = useState(
@@ -129,6 +130,7 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
           quality_date: qualityCheckedDate,
           quality_photo: qualityPhoto,
           quality_notes: qualityNotes,
+          pos: qualityPos,
         }),
       });
 
@@ -410,6 +412,23 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
+              </div>
+
+              {/* Pos / Lokasi Penyimpanan Part di Gudang Quality */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Pos / Lokasi Penyimpanan Part
+                </label>
+                <input
+                  type="text"
+                  placeholder="Misalnya: L2.1, L3.1, Rak QA-02..."
+                  value={qualityPos}
+                  onChange={(e) => setQualityPos(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-blue-500 font-mono"
+                />
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  Lokasi rak / pos part di gudang transit Tim Quality (muncul di label tag pengiriman ke HMMI)
+                </span>
               </div>
 
               {/* Foto Bukti Tim Quality */}

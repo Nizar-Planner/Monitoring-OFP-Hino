@@ -34,11 +34,17 @@ CREATE TABLE IF NOT EXISTS public.opf_records (
     quality_checked_by TEXT DEFAULT '',
     quality_photo TEXT DEFAULT '',
     quality_notes TEXT DEFAULT '',
+    pos TEXT DEFAULT '', -- Lokasi penyimpanan gudang/rak Tim Quality (e.g. L2.1, L3.1)
 
     -- Pengiriman Fisik Part ke Pabrik HMMI / HML (Supplier)
     shipped_date DATE DEFAULT NULL,
     shipping_resi TEXT DEFAULT '',
     shipping_carrier TEXT DEFAULT '',
+
+    -- Data Teknis Kerusakan & Penanda Tag OFP
+    problem TEXT DEFAULT '', -- Deskripsi kerusakan / keluhan part
+    occurred_date DATE DEFAULT NULL, -- Tanggal kejadian kerusakan unit
+    repair_date DATE DEFAULT NULL, -- Tanggal perbaikan kendaraan
 
     -- Metrik Lead Time & SLA Overdue (> 30 Hari)
     days_elapsed INTEGER DEFAULT 0,
@@ -47,6 +53,12 @@ CREATE TABLE IF NOT EXISTS public.opf_records (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
+
+-- Migrasi jika tabel sudah ada sebelumnya di Supabase
+ALTER TABLE public.opf_records ADD COLUMN IF NOT EXISTS problem TEXT DEFAULT '';
+ALTER TABLE public.opf_records ADD COLUMN IF NOT EXISTS pos TEXT DEFAULT '';
+ALTER TABLE public.opf_records ADD COLUMN IF NOT EXISTS occurred_date DATE DEFAULT NULL;
+ALTER TABLE public.opf_records ADD COLUMN IF NOT EXISTS repair_date DATE DEFAULT NULL;
 
 -- 2. Unique Index untuk Mendukung Operasi UPSERT (Anti-Duplikasi TR/DTR & Part)
 CREATE UNIQUE INDEX IF NOT EXISTS idx_opf_dtr_part_composite 

@@ -707,7 +707,7 @@ export const SingleTagCard: React.FC<SingleTagCardProps> = ({
     record.repair_date || record.area_received_date || record.quality_checked_date || record.request_date
   );
   const dtrNo = getSafeValue(record.dtr_number);
-  const pos = getSafeValue(record.pos || record.part_number);
+  const pos = getSafeValue(record.pos, '-');
 
   return (
     <div
@@ -773,7 +773,7 @@ export const SingleTagCard: React.FC<SingleTagCardProps> = ({
             </span>
           </div>
           <div className="flex items-center justify-between gap-1 pt-0.5 border-t border-slate-200 text-[9px]">
-            <span className="font-semibold text-slate-600 uppercase">Pos / Part No:</span>
+            <span className="font-semibold text-slate-600 uppercase">Pos (Lokasi):</span>
             <span className="font-mono font-bold text-slate-800 text-[10px] truncate max-w-[140px]">
               {pos}
             </span>

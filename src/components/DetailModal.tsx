@@ -271,6 +271,30 @@ export const DetailModal: React.FC<DetailModalProps> = ({
                   <span className="text-slate-500 block text-[11px]">Judgment</span>
                   <span className="font-medium text-slate-900">{record.judgement_qpi || '-'}</span>
                 </div>
+                <div className="col-span-2">
+                  <span className="text-slate-500 block text-[11px]">Problem / Keluhan Kerusakan</span>
+                  <span className="font-medium text-slate-900 bg-amber-50/70 p-2 rounded border border-amber-200 block text-xs">
+                    {record.problem || '-'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[11px]">Pos / Lokasi Gudang QA</span>
+                  <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
+                    {record.pos || '-'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[11px]">Occurred Date</span>
+                  <span className="font-mono text-slate-800">
+                    {record.occurred_date || '-'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[11px]">Repair Date</span>
+                  <span className="font-mono text-slate-800">
+                    {record.repair_date || '-'}
+                  </span>
+                </div>
               </div>
             </div>
 

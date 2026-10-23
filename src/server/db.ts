@@ -83,6 +83,10 @@ function ensureSqliteColumns(db: Database): void {
   const migrations: Array<{ name: string; sql: string }> = [
     { name: 'part_number', sql: "ALTER TABLE opf_records ADD COLUMN part_number TEXT DEFAULT ''" },
     { name: 'judgement_date', sql: "ALTER TABLE opf_records ADD COLUMN judgement_date TEXT DEFAULT NULL" },
+    { name: 'problem', sql: "ALTER TABLE opf_records ADD COLUMN problem TEXT DEFAULT ''" },
+    { name: 'pos', sql: "ALTER TABLE opf_records ADD COLUMN pos TEXT DEFAULT ''" },
+    { name: 'occurred_date', sql: "ALTER TABLE opf_records ADD COLUMN occurred_date TEXT DEFAULT NULL" },
+    { name: 'repair_date', sql: "ALTER TABLE opf_records ADD COLUMN repair_date TEXT DEFAULT NULL" },
   ];
 
   for (const item of migrations) {
@@ -114,6 +118,10 @@ function createLocalTables(db: Database): void {
       judgement_date TEXT DEFAULT NULL,
       request_date TEXT NOT NULL,
       tracking_status TEXT NOT NULL DEFAULT 'Waiting OFP',
+      problem TEXT DEFAULT '',
+      pos TEXT DEFAULT '',
+      occurred_date TEXT DEFAULT NULL,
+      repair_date TEXT DEFAULT NULL,
       area_received_date TEXT DEFAULT NULL,
       area_received_by TEXT DEFAULT '',
       area_photo TEXT DEFAULT '',
@@ -298,7 +306,7 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
 
   if (existing && existing.id) {
     db.run(
-      `UPDATE opf_records SET part_name = ?, part_number = ?, quantity = ?, model = ?, chassis_number = ?, engine_number = ?, mileage = ?, dealer_name = ?, qpi_number = ?, judgement_qpi = ?, judgement_date = ?, request_date = ?, tracking_status = ?, area_received_date = ?, area_received_by = ?, area_photo = ?, area_notes = ?, quality_checked_date = ?, quality_checked_by = ?, quality_photo = ?, quality_notes = ?, shipped_date = ?, shipping_resi = ?, shipping_carrier = ?, days_elapsed = ?, is_overdue = ?, updated_at = datetime('now') WHERE id = ?`,
+      `UPDATE opf_records SET part_name = ?, part_number = ?, quantity = ?, model = ?, chassis_number = ?, engine_number = ?, mileage = ?, dealer_name = ?, qpi_number = ?, judgement_qpi = ?, judgement_date = ?, request_date = ?, tracking_status = ?, problem = ?, pos = ?, occurred_date = ?, repair_date = ?, area_received_date = ?, area_received_by = ?, area_photo = ?, area_notes = ?, quality_checked_date = ?, quality_checked_by = ?, quality_photo = ?, quality_notes = ?, shipped_date = ?, shipping_resi = ?, shipping_carrier = ?, days_elapsed = ?, is_overdue = ?, updated_at = datetime('now') WHERE id = ?`,
       [
         record.part_name,
         partNum,
@@ -313,6 +321,10 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
         record.judgement_date || null,
         record.request_date,
         record.tracking_status || existing.tracking_status,
+        record.problem ?? existing.problem ?? '',
+        record.pos ?? existing.pos ?? '',
+        record.occurred_date ?? existing.occurred_date ?? null,
+        record.repair_date ?? existing.repair_date ?? null,
         record.area_received_date ?? existing.area_received_date,
         record.area_received_by ?? existing.area_received_by,
         record.area_photo ?? existing.area_photo,
@@ -325,7 +337,7 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
         record.shipping_resi ?? existing.shipping_resi,
         record.shipping_carrier ?? existing.shipping_carrier,
         days,
-        isOverdue,
+        isOverdue ? 1 : 0,
         existing.id
       ]
     );
@@ -333,7 +345,7 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
   }
 
   db.run(
-    `INSERT INTO opf_records (dtr_number, part_name, part_number, quantity, model, chassis_number, engine_number, mileage, dealer_name, qpi_number, judgement_qpi, judgement_date, request_date, tracking_status, area_received_date, area_received_by, area_photo, area_notes, quality_checked_date, quality_checked_by, quality_photo, quality_notes, shipped_date, shipping_resi, shipping_carrier, days_elapsed, is_overdue) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
+    `INSERT INTO opf_records (dtr_number, part_name, part_number, quantity, model, chassis_number, engine_number, mileage, dealer_name, qpi_number, judgement_qpi, judgement_date, request_date, tracking_status, problem, pos, occurred_date, repair_date, area_received_date, area_received_by, area_photo, area_notes, quality_checked_date, quality_checked_by, quality_photo, quality_notes, shipped_date, shipping_resi, shipping_carrier, days_elapsed, is_overdue) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
     [
       record.dtr_number,
       record.part_name,
@@ -349,6 +361,10 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
       record.judgement_date || null,
       record.request_date || new Date().toISOString().split('T')[0],
       record.tracking_status || 'Waiting OFP',
+      record.problem || '',
+      record.pos || '',
+      record.occurred_date || null,
+      record.repair_date || null,
       record.area_received_date || null,
       record.area_received_by || '',
       record.area_photo || '',
@@ -361,7 +377,7 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
       record.shipping_resi || '',
       record.shipping_carrier || '',
       days,
-      isOverdue,
+      isOverdue ? 1 : 0,
     ]
   );
 
@@ -427,6 +443,7 @@ export async function updateQualityInspection(id: number, data: {
   quality_photo?: string;
   quality_notes?: string;
   quality_date?: string;
+  pos?: string;
 }): Promise<boolean> {
   const date = data.quality_date || new Date().toISOString().split('T')[0];
   let photoUrl = data.quality_photo || '';
@@ -437,8 +454,8 @@ export async function updateQualityInspection(id: number, data: {
 
   const db = await getDb();
   db.run(
-    `UPDATE opf_records SET quality_checked_date = ?, quality_checked_by = ?, quality_photo = COALESCE(NULLIF(?, ''), quality_photo), quality_notes = ?, updated_at = datetime('now') WHERE id = ?`,
-    [date, data.quality_checked_by, photoUrl, data.quality_notes || '', id]
+    `UPDATE opf_records SET quality_checked_date = ?, quality_checked_by = ?, quality_photo = COALESCE(NULLIF(?, ''), quality_photo), quality_notes = ?, pos = COALESCE(NULLIF(?, ''), pos), updated_at = datetime('now') WHERE id = ?`,
+    [date, data.quality_checked_by, photoUrl, data.quality_notes || '', data.pos || '', id]
   );
   saveDb();
   return true;

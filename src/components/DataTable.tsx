@@ -103,6 +103,8 @@ export const DataTable: React.FC<DataTableProps> = ({
         r.engine_number?.toLowerCase().includes(term) ||
         r.dealer_name?.toLowerCase().includes(term) ||
         r.qpi_number?.toLowerCase().includes(term) ||
+        r.problem?.toLowerCase().includes(term) ||
+        r.pos?.toLowerCase().includes(term) ||
         r.judgement_qpi?.toLowerCase().includes(term) ||
         r.model?.toLowerCase().includes(term)
       );
@@ -487,7 +489,10 @@ export const DataTable: React.FC<DataTableProps> = ({
               <th className="py-3 px-3 text-right whitespace-nowrap">Mileage</th>
               <th className="py-3 px-4 whitespace-nowrap">DLR</th>
               <th className="py-3 px-3 whitespace-nowrap font-mono">QPI Number</th>
+              <th className="py-3 px-4 whitespace-nowrap">PROBLEM</th>
               <th className="py-3 px-3 whitespace-nowrap">Judgment</th>
+              <th className="py-3 px-3 whitespace-nowrap text-center">OCCURRED DATE</th>
+              <th className="py-3 px-3 whitespace-nowrap text-center">REPAIR DATE</th>
               <th className="py-3 px-3 whitespace-nowrap text-center">Leadtime (Hari)</th>
               <th className="py-3 px-3 whitespace-nowrap text-center">Status Alur</th>
               <th className="py-3 px-3 whitespace-nowrap text-center">Bukti Foto</th>
@@ -498,7 +503,7 @@ export const DataTable: React.FC<DataTableProps> = ({
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="animate-pulse">
-                  <td colSpan={15} className="py-4 px-4">
+                  <td colSpan={18} className="py-4 px-4">
                     <div className="h-4 bg-slate-200 rounded w-full"></div>
                   </td>
                 </tr>
@@ -580,6 +585,13 @@ export const DataTable: React.FC<DataTableProps> = ({
                     {item.qpi_number || '-'}
                   </td>
 
+                  {/* PROBLEM */}
+                  <td className="py-3 px-4 whitespace-nowrap max-w-[220px]" title={item.problem || '-'}>
+                    <div className="font-normal text-slate-800 truncate">
+                      {item.problem ? item.problem : '-'}
+                    </div>
+                  </td>
+
                   {/* Judgment & Judgement Date */}
                   <td className="py-3 px-3 whitespace-nowrap max-w-[160px]">
                     <div className="font-medium text-slate-900 truncate" title={item.judgement_qpi}>
@@ -590,6 +602,16 @@ export const DataTable: React.FC<DataTableProps> = ({
                         Tgl: {item.judgement_date}
                       </div>
                     )}
+                  </td>
+
+                  {/* OCCURRED DATE */}
+                  <td className="py-3 px-3 text-center whitespace-nowrap font-mono text-slate-700">
+                    {item.occurred_date ? item.occurred_date : '-'}
+                  </td>
+
+                  {/* REPAIR DATE */}
+                  <td className="py-3 px-3 text-center whitespace-nowrap font-mono text-slate-700">
+                    {item.repair_date ? item.repair_date : '-'}
                   </td>
 
                   {/* Leadtime Hari */}

@@ -146,7 +146,7 @@ function drawSingleTag(
     record.repair_date || record.area_received_date || record.quality_checked_date || record.request_date
   );
   const dtrNo = getSafeValue(record.dtr_number);
-  const pos = getSafeValue(record.pos || record.part_number);
+  const pos = getSafeValue(record.pos, '-');
 
   // 1. Kotak Border Luar Utama
   doc.setDrawColor(20, 20, 20);

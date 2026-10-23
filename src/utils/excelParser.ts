@@ -397,6 +397,56 @@ function processRowMap(
     }
   }
 
+  // ==============================================================================
+  // PEMETAAN KOLOM: Problem, Occurred Date, Repair Date, Pos
+  // ==============================================================================
+  // 15. Kolom Problem / Keluhan Kerusakan
+  const problem = String(
+    rowMap['problem'] ||
+    rowMap['masalah'] ||
+    rowMap['deskripsimasalah'] ||
+    rowMap['issue'] ||
+    rowMap['keluhan'] ||
+    rowMap['failure'] ||
+    rowMap['deskripsi'] ||
+    ''
+  ).trim();
+
+  // 16. Kolom Occurred Date (Tanggal Kerusakan)
+  const rawOccurredDate =
+    rowMap['occurreddate'] ||
+    rowMap['occurdate'] ||
+    rowMap['tanggalkejadian'] ||
+    rowMap['tglkejadian'] ||
+    rowMap['occurred'] ||
+    rowMap['failuredate'] ||
+    rowMap['tglrusak'] ||
+    '';
+  const occurredDate = parseSafeExcelDate(rawOccurredDate);
+
+  // 17. Kolom Repair Date (Tanggal Perbaikan)
+  const rawRepairDate =
+    rowMap['repairdate'] ||
+    rowMap['tglperbaikan'] ||
+    rowMap['tanggalperbaikan'] ||
+    rowMap['repaired'] ||
+    rowMap['tglrepair'] ||
+    rowMap['tanggalselesai'] ||
+    '';
+  const repairDate = parseSafeExcelDate(rawRepairDate);
+
+  // 18. Kolom Pos / Lokasi Penyimpanan Part
+  const pos = String(
+    rowMap['pos'] ||
+    rowMap['lokasi'] ||
+    rowMap['lokasipart'] ||
+    rowMap['lokasipenyimpanan'] ||
+    rowMap['storagepos'] ||
+    rowMap['rack'] ||
+    rowMap['rak'] ||
+    ''
+  ).trim();
+
   // Simpan record klaim
   records.push({
     dtr_number: trNo,
@@ -416,5 +466,9 @@ function processRowMap(
     area_received_date: ofpReceiveDate,
     area_received_by: ofpReceiveDate ? (rowMap['areareceivedby'] || 'Tim Area HMSI') : '',
     shipped_date: ofpSendToHmmiDate,
+    problem: problem,
+    pos: pos,
+    occurred_date: occurredDate,
+    repair_date: repairDate,
   });
 }

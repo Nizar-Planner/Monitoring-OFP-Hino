@@ -25,9 +25,13 @@ export const ManualEntryModal: React.FC<ManualEntryModalProps> = ({
   const [mileage, setMileage] = useState(38000);
   const [dealerName, setDealerName] = useState('PT Duta Cemerlang Motors - Jakarta Barat');
   const [qpiNumber, setQpiNumber] = useState('QPI-HMSI-26-' + Math.floor(100 + Math.random() * 900));
+  const [problem, setProblem] = useState('Suara mendesing dan tenaga mesin drop saat tanjakan');
+  const [pos, setPos] = useState('L2.1');
   const [judgementQpi, setJudgementQpi] = useState('Under Technical Review');
   const [judgementDate, setJudgementDate] = useState(new Date().toISOString().split('T')[0]);
   const [requestDate, setRequestDate] = useState(new Date().toISOString().split('T')[0]);
+  const [occurredDate, setOccurredDate] = useState(new Date().toISOString().split('T')[0]);
+  const [repairDate, setRepairDate] = useState(new Date().toISOString().split('T')[0]);
   const [trackingStatus, setTrackingStatus] = useState<'Waiting OFP' | 'Not yet shipped' | 'Delivered'>('Waiting OFP');
   const [areaNotes, setAreaNotes] = useState('');
 
@@ -53,9 +57,13 @@ export const ManualEntryModal: React.FC<ManualEntryModalProps> = ({
         mileage: Number(mileage) || 0,
         dealer_name: dealerName,
         qpi_number: qpiNumber,
+        problem,
+        pos,
         judgement_qpi: judgementQpi,
         judgement_date: judgementDate,
         request_date: requestDate,
+        occurred_date: occurredDate,
+        repair_date: repairDate,
         tracking_status: trackingStatus,
         area_notes: areaNotes,
       });
@@ -257,6 +265,34 @@ export const ManualEntryModal: React.FC<ManualEntryModalProps> = ({
               />
             </div>
 
+            {/* Problem */}
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Problem / Keluhan Kerusakan
+              </label>
+              <textarea
+                rows={2}
+                value={problem}
+                onChange={(e) => setProblem(e.target.value)}
+                placeholder="Deskripsi kerusakan part..."
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-red-500 focus:outline-none"
+              />
+            </div>
+
+            {/* Pos / Lokasi Rak Gudang */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Pos / Lokasi Rak Part (Quality)
+              </label>
+              <input
+                type="text"
+                value={pos}
+                onChange={(e) => setPos(e.target.value)}
+                placeholder="Contoh: L2.1, L3.1..."
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-red-500 focus:outline-none font-mono"
+              />
+            </div>
+
             {/* Tanggal Request / DTR */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -266,6 +302,32 @@ export const ManualEntryModal: React.FC<ManualEntryModalProps> = ({
                 type="date"
                 value={requestDate}
                 onChange={(e) => setRequestDate(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-red-500 focus:outline-none"
+              />
+            </div>
+
+            {/* Occurred Date */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Occurred Date (Tgl Kerusakan)
+              </label>
+              <input
+                type="date"
+                value={occurredDate}
+                onChange={(e) => setOccurredDate(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-red-500 focus:outline-none"
+              />
+            </div>
+
+            {/* Repair Date */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Repair Date (Tgl Perbaikan)
+              </label>
+              <input
+                type="date"
+                value={repairDate}
+                onChange={(e) => setRepairDate(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-red-500 focus:outline-none"
               />
             </div>

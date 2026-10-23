@@ -30,7 +30,7 @@ export async function parseAndImportExcel(buffer: Buffer): Promise<ExcelImportRe
   const supabaseErrors: string[] = [];
 
   // 1. SIMPAN LANGSUNG KE SUPABASE (Single Source of Truth)
-  if (isSupabaseConfigured()) {
+  if (isSupabaseConfigured() && supabase) {
     try {
       console.log(`[EXCEL -> SUPABASE] Mengirim ${records.length} data ke Supabase...`);
       
@@ -78,8 +78,11 @@ export function generateExcelTemplate(): Buffer {
     'Mileage',
     'DLR',
     'QPI Number',
+    'Problem',
     'Judgment',
     'Judgement Date',
+    'Occurred Date',
+    'Repair Date',
     'OFP Receive',
     'OFP Send to HMMI'
   ];
@@ -95,8 +98,11 @@ export function generateExcelTemplate(): Buffer {
       42000,
       'PT Duta Cemerlang Motors - Jakarta Barat',
       'QPI-HMSI-26-0601',
+      'Suara mendesing dan tenaga mesin drop saat tanjakan',
       'Under Technical Review',
       '2026-10-15',
+      '2026-10-10',
+      '2026-10-14',
       '2026-10-18', // OFP Receive -> Status: Sent to HMMI (jika terkirim)
       '2026-10-20'  // OFP Send to HMMI
     ],
@@ -110,8 +116,11 @@ export function generateExcelTemplate(): Buffer {
       53400,
       'PT Indomobil Prima Niaga - Surabaya',
       'QPI-HMSI-26-0602',
+      'Tekanan bahan bakar abnormal (DTC P0087)',
       'Waiting Physical Sample',
       '2026-09-10',
+      '2026-09-05',
+      '2026-09-09',
       '2026-10-12', // OFP Receive -> Status: Received by Area
       ''            // OFP Send to HMMI (belum kirim)
     ],
@@ -126,8 +135,11 @@ export function generateExcelTemplate(): Buffer {
       31200,
       'PT Maya Graha Indah - Bandung',
       'QPI-HMSI-26-0603',
+      'Daun per nomor 1 patah pada bagian lengkungan',
       'Pending Metallurgical Lab',
       '2026-10-01',
+      '2026-09-28',
+      '2026-09-30',
       '',           // OFP Receive (kosong) -> Status: Belum Terkirim
       ''            // OFP Send to HMMI (kosong)
     ],
@@ -141,8 +153,11 @@ export function generateExcelTemplate(): Buffer {
       31200,
       'PT Maya Graha Indah - Bandung',
       'QPI-HMSI-26-0603',
+      'Drat baut slek dan longgar',
       'Pending Inspection',
       '2026-10-01',
+      '2026-09-28',
+      '2026-09-30',
       '',
       ''
     ],
@@ -156,8 +171,11 @@ export function generateExcelTemplate(): Buffer {
       68000,
       'PT Indomobil Prima Niaga - Medan',
       'QPI-HMSI-26-0604',
+      'Pedal kopling keras dan kebocoran minyak kopling',
       'Piston Seal Leaking',
       '2026-09-14',
+      '2026-09-08',
+      '2026-09-12',
       '2026-10-05',
       '2026-10-10'
     ]
@@ -176,8 +194,11 @@ export function generateExcelTemplate(): Buffer {
     { wch: 12 }, // Mileage
     { wch: 38 }, // DLR
     { wch: 20 }, // QPI Number
+    { wch: 35 }, // Problem
     { wch: 26 }, // Judgment
     { wch: 16 }, // Judgement Date
+    { wch: 16 }, // Occurred Date
+    { wch: 16 }, // Repair Date
     { wch: 18 }, // OFP Receive
     { wch: 20 }  // OFP Send to HMMI
   ];

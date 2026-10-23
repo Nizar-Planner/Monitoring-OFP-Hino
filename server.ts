@@ -249,7 +249,7 @@ app.put('/api/opf/:id/area-receipt', async (req, res) => {
 app.put('/api/opf/:id/quality-check', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const { quality_checked_by, quality_photo, quality_notes, quality_date } = req.body;
+    const { quality_checked_by, quality_photo, quality_notes, quality_date, pos } = req.body;
 
     if (!quality_checked_by) {
       return res.status(400).json({ success: false, error: 'Nama personil Tim Quality wajib diisi.' });
@@ -260,6 +260,7 @@ app.put('/api/opf/:id/quality-check', async (req, res) => {
       quality_photo,
       quality_notes,
       quality_date,
+      pos,
     });
 
     const updated = await getOpfById(id);
@@ -438,7 +439,7 @@ async function startServer() {
   console.log('[DATABASE] SQLite berhasil dimuat.');
 
   // SYNC AWAL DARI SUPABASE SAAT SERVER NYALA (Mencegah data terhapus saat Render restart)
-  if (isSupabaseConfigured()) {
+  if (isSupabaseConfigured() && supabase) {
     try {
       console.log('[SUPABASE] Menarik data terbaru dari Supabase...');
       const { data: remoteRecords, error } = await supabase.from('opf_records').select('*');
