@@ -2,11 +2,13 @@ import * as XLSX from 'xlsx';
 import { OpfRecord, ExcelImportResult } from '../types.js';
 import { bulkInsertOrUpdateOpf } from './db.js';
 import { extractOpfRecordsFromSheet, normalizeKey, parseExcelDate, parseSafeExcelDate } from '../utils/excelParser.js';
+import { supabase, isSupabaseConfigured } from '../lib/supabase.js';
 
 export { extractOpfRecordsFromSheet, normalizeKey, parseExcelDate, parseSafeExcelDate };
 
 /**
- * Reads Excel file buffer and imports rows into SQLite using high-speed bulk transactions
+ * Reads Excel file buffer, inserts/upserts directly to Supabase as Single Source of Truth,
+ * and updates SQLite local cache.
  */
 export async function parseAndImportExcel(buffer: Buffer): Promise<ExcelImportResult> {
   const workbook = XLSX.read(buffer, { type: 'buffer' });
@@ -25,13 +27,40 @@ export async function parseAndImportExcel(buffer: Buffer): Promise<ExcelImportRe
     throw new Error('Tidak ada baris data valid yang ditemukan pada file Excel. Pastikan terdapat kolom TR_No dan Part.');
   }
 
+  const supabaseErrors: string[] = [];
+
+  // 1. SIMPAN LANGSUNG KE SUPABASE (Single Source of Truth)
+  if (isSupabaseConfigured()) {
+    try {
+      console.log(`[EXCEL -> SUPABASE] Mengirim ${records.length} data ke Supabase...`);
+      
+      // Bersihkan object agar sesuai dengan skema kolom Supabase (tanpa ID auto-increment lokal)
+      const payload = records.map(({ id, ...rest }) => rest);
+
+      const { data, error } = await supabase
+        .from('opf_records')
+        .upsert(payload, { onConflict: 'dtr_number,part_name' }); // Menggunakan composite key/unique constraint
+
+      if (error) {
+        console.error('[EXCEL -> SUPABASE] Error upsert Supabase:', error.message);
+        supabaseErrors.push(`Supabase Error: ${error.message}`);
+      } else {
+        console.log('[EXCEL -> SUPABASE] Berhasil menyinkronkan data ke Supabase.');
+      }
+    } catch (sbErr: any) {
+      console.error('[EXCEL -> SUPABASE] Exception saat kirim ke Supabase:', sbErr);
+      supabaseErrors.push(`Supabase Exception: ${sbErr.message || sbErr}`);
+    }
+  }
+
+  // 2. PERBARUI SQLITE LOKAL (sebagai cache sementara)
   const dbResult = await bulkInsertOrUpdateOpf(records);
 
   return {
     totalRowsProcessed: dbResult.totalRowsProcessed,
     recordsInserted: dbResult.recordsInserted,
     recordsUpdated: dbResult.recordsUpdated,
-    errors: [...parseErrors, ...dbResult.errors],
+    errors: [...parseErrors, ...supabaseErrors, ...dbResult.errors],
   };
 }
 
