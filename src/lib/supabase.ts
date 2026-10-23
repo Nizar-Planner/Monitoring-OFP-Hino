@@ -164,3 +164,8 @@ export async function uploadPhotoToSupabase(
     return { success: false, publicUrl: '', error: err.message || 'Gagal mengunggah foto ke Supabase Storage.' };
   }
 }
+
+/**
+ * Convenience export for files that expect a direct 'supabase' named export
+ */
+export const supabase = getSupabaseClient();
