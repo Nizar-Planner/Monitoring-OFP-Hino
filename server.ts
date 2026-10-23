@@ -29,7 +29,8 @@ import {
   isSupabaseConfigured,
   uploadPhotoToSupabase,
   SUPABASE_STORAGE_BUCKET,
-  SUPABASE_URL
+  SUPABASE_URL,
+  supabase
 } from './src/lib/supabase.js';
 
 dotenv.config();
@@ -435,6 +436,24 @@ app.get('/api/export/csv', async (_req, res) => {
 async function startServer() {
   await getDb();
   console.log('[DATABASE] SQLite berhasil dimuat.');
+
+  // SYNC AWAL DARI SUPABASE SAAT SERVER NYALA (Mencegah data terhapus saat Render restart)
+  if (isSupabaseConfigured()) {
+    try {
+      console.log('[SUPABASE] Menarik data terbaru dari Supabase...');
+      const { data: remoteRecords, error } = await supabase.from('opf_records').select('*');
+      if (error) {
+        console.error('[SUPABASE] Gagal sync data dari Supabase:', error.message);
+      } else if (remoteRecords && remoteRecords.length > 0) {
+        await bulkInsertOrUpdateOpf(remoteRecords);
+        console.log(`[SUPABASE] Berhasil menarik ${remoteRecords.length} record dari Supabase ke SQLite lokal.`);
+      } else {
+        console.log('[SUPABASE] Tabel di Supabase kosong atau belum berisi record.');
+      }
+    } catch (syncErr) {
+      console.error('[SUPABASE] Error saat sinkronisasi awal:', syncErr);
+    }
+  }
 
   if (!isProduction) {
     const { createServer } = await import('vite');
