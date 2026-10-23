@@ -54,7 +54,6 @@ export async function getDb(): Promise<Database> {
 
   createLocalTables(dbInstance);
   ensureSqliteColumns(dbInstance);
-  seedInitialData(dbInstance);
   saveDb();
   return dbInstance;
 }
@@ -97,6 +96,13 @@ function ensureSqliteColumns(db: Database): void {
         // ignore if already exists
       }
     }
+  }
+
+  // Bersihkan data dummy (jika ada sisa)
+  try {
+    db.run("DELETE FROM opf_records WHERE dtr_number = 'DTR-2026-MDN-0018' OR dtr_number LIKE '%MDN-0018%'");
+  } catch (_delErr) {
+    // ignore
   }
 }
 
@@ -144,74 +150,76 @@ function createLocalTables(db: Database): void {
   db.run(`CREATE INDEX IF NOT EXISTS idx_dtr_part_no ON opf_records (dtr_number, part_number);`);
 }
 
-function seedInitialData(db: Database): void {
-  const result = db.exec('SELECT COUNT(*) as count FROM opf_records');
-  const count = (result.length > 0 && result[0].values.length > 0) ? Number(result[0].values[0][0]) : 0;
-
-  if (count > 0) return;
-
-  const sampleRecords: Array<Omit<OpfRecord, 'id' | 'days_elapsed' | 'is_overdue'>> = [
-    {
-      dtr_number: 'DTR-2026-MDN-0018',
-      part_name: 'Turbocharger Assembly',
-      part_number: '24100-33120',
-      quantity: 1,
-      model: 'Hino 500 FM 260 JD (6x4 Dump)',
-      chassis_number: 'MHFJ1JGBMK009182',
-      engine_number: 'J08E-WE19844',
-      mileage: 61300,
-      dealer_name: 'PT Indomobil Prima Niaga - Medan',
-      qpi_number: 'QPI-HMSI-26-0312',
-      judgement_qpi: 'Under Investigation',
-      judgement_date: '2026-09-08',
-      request_date: '2026-09-08',
-      tracking_status: 'Waiting OFP',
-      area_notes: 'Part belum dikirimkan dari gudang dealer Medan, sudah di-follow up berkali-kali.',
-    }
-  ];
-
-  for (const item of sampleRecords) {
-    const days = calculateDaysElapsed(item.request_date, item.shipped_date);
-    const overdue = (days > 30 && item.tracking_status !== 'Delivered') ? 1 : 0;
-
-    db.run(
-      `INSERT INTO opf_records 
-      (dtr_number, part_name, part_number, quantity, model, chassis_number, engine_number, mileage, dealer_name, qpi_number, judgement_qpi, judgement_date, request_date, tracking_status, area_received_date, area_received_by, area_photo, area_notes, quality_checked_date, quality_checked_by, quality_photo, quality_notes, shipped_date, shipping_resi, shipping_carrier, days_elapsed, is_overdue)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        item.dtr_number,
-        item.part_name,
-        item.part_number || '',
-        item.quantity,
-        item.model,
-        item.chassis_number,
-        item.engine_number,
-        item.mileage,
-        item.dealer_name,
-        item.qpi_number || '',
-        item.judgement_qpi || '',
-        item.judgement_date || null,
-        item.request_date,
-        item.tracking_status,
-        item.area_received_date || null,
-        item.area_received_by || '',
-        item.area_photo || '',
-        item.area_notes || '',
-        item.quality_checked_date || null,
-        item.quality_checked_by || '',
-        item.quality_photo || '',
-        item.quality_notes || '',
-        item.shipped_date || null,
-        item.shipping_resi || '',
-        item.shipping_carrier || '',
-        days,
-        overdue
-      ]
-    );
-  }
-}
-
 export async function getAllOpfRecords(query = '', statusFilter = 'all', overdueOnly = false): Promise<OpfRecord[]> {
+  const sb = getSupabaseClient();
+  if (isSupabaseConfigured() && sb) {
+    try {
+      let req = sb.from('opf_records').select('*');
+      if (statusFilter && statusFilter !== 'all') {
+        if (statusFilter === 'Waiting OFP' || statusFilter === 'Belum Terkirim') {
+          req = req.in('tracking_status', ['Waiting OFP', 'Belum Terkirim']);
+        } else if (statusFilter === 'Not yet shipped' || statusFilter === 'Received by Area') {
+          req = req.in('tracking_status', ['Not yet shipped', 'Received by Area']);
+        } else if (statusFilter === 'Delivered' || statusFilter === 'Sent to HMMI') {
+          req = req.in('tracking_status', ['Delivered', 'Sent to HMMI']);
+        } else {
+          req = req.eq('tracking_status', statusFilter);
+        }
+      }
+
+      const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((res) =>
+        setTimeout(() => res({ data: null, error: { message: 'Supabase query timeout (3s)' } }), 3000)
+      );
+      const { data, error } = (await Promise.race([req, timeoutPromise])) as any;
+      if (!error && data) {
+        let records: OpfRecord[] = data.map((row: any) => {
+          const days = calculateDaysElapsed(row.request_date, row.shipped_date);
+          const isOverdue = days > 30 && row.tracking_status !== 'Delivered' && row.tracking_status !== 'Sent to HMMI';
+          return {
+            ...row,
+            days_elapsed: days,
+            is_overdue: isOverdue,
+          };
+        });
+
+        if (overdueOnly) {
+          records = records.filter((r) => r.is_overdue);
+        }
+
+        if (query.trim()) {
+          const q = query.trim().toLowerCase();
+          records = records.filter((r) =>
+            (r.dtr_number && r.dtr_number.toLowerCase().includes(q)) ||
+            (r.part_name && r.part_name.toLowerCase().includes(q)) ||
+            (r.part_number && r.part_number.toLowerCase().includes(q)) ||
+            (r.model && r.model.toLowerCase().includes(q)) ||
+            (r.chassis_number && r.chassis_number.toLowerCase().includes(q)) ||
+            (r.engine_number && r.engine_number.toLowerCase().includes(q)) ||
+            (r.dealer_name && r.dealer_name.toLowerCase().includes(q)) ||
+            (r.qpi_number && r.qpi_number.toLowerCase().includes(q)) ||
+            (r.problem && r.problem.toLowerCase().includes(q)) ||
+            (r.pos && r.pos.toLowerCase().includes(q)) ||
+            (r.judgement_qpi && r.judgement_qpi.toLowerCase().includes(q))
+          );
+        }
+
+        records.sort((a, b) => {
+          if ((b.is_overdue ? 1 : 0) !== (a.is_overdue ? 1 : 0)) {
+            return (b.is_overdue ? 1 : 0) - (a.is_overdue ? 1 : 0);
+          }
+          return (b.days_elapsed || 0) - (a.days_elapsed || 0);
+        });
+
+        return records;
+      } else if (error) {
+        console.warn('[SUPABASE] Query failed, using SQLite cache:', error.message);
+      }
+    } catch (err) {
+      console.warn('[SUPABASE] Exception in getAllOpfRecords, falling back to SQLite:', err);
+    }
+  }
+
+  // SQLite fallback
   const db = await getDb();
   let sql = 'SELECT * FROM opf_records WHERE 1=1';
   const params: SqlValue[] = [];
@@ -226,13 +234,23 @@ export async function getAllOpfRecords(query = '', statusFilter = 'all', overdue
               OR engine_number LIKE ?
               OR dealer_name LIKE ?
               OR qpi_number LIKE ?
+              OR problem LIKE ?
+              OR pos LIKE ?
               OR judgement_qpi LIKE ?)`;
-    params.push(q, q, q, q, q, q, q, q, q);
+    params.push(q, q, q, q, q, q, q, q, q, q, q);
   }
 
   if (statusFilter && statusFilter !== 'all') {
-    sql += ` AND tracking_status = ?`;
-    params.push(statusFilter);
+    if (statusFilter === 'Waiting OFP' || statusFilter === 'Belum Terkirim') {
+      sql += ` AND (tracking_status = 'Waiting OFP' OR tracking_status = 'Belum Terkirim')`;
+    } else if (statusFilter === 'Not yet shipped' || statusFilter === 'Received by Area') {
+      sql += ` AND (tracking_status = 'Not yet shipped' OR tracking_status = 'Received by Area')`;
+    } else if (statusFilter === 'Delivered' || statusFilter === 'Sent to HMMI') {
+      sql += ` AND (tracking_status = 'Delivered' OR tracking_status = 'Sent to HMMI')`;
+    } else {
+      sql += ` AND tracking_status = ?`;
+      params.push(statusFilter);
+    }
   }
 
   if (overdueOnly) {
@@ -258,6 +276,23 @@ export async function getAllOpfRecords(query = '', statusFilter = 'all', overdue
 }
 
 export async function getOpfById(id: number): Promise<OpfRecord | null> {
+  const sb = getSupabaseClient();
+  if (isSupabaseConfigured() && sb) {
+    try {
+      const { data, error } = await sb.from('opf_records').select('*').eq('id', id).maybeSingle();
+      if (!error && data) {
+        const days = calculateDaysElapsed(data.request_date, data.shipped_date);
+        return {
+          ...data,
+          days_elapsed: days,
+          is_overdue: days > 30 && data.tracking_status !== 'Delivered' && data.tracking_status !== 'Sent to HMMI',
+        };
+      }
+    } catch (_err) {
+      // fallback to SQLite
+    }
+  }
+
   const db = await getDb();
   const stmt = db.prepare('SELECT * FROM opf_records WHERE id = ?');
   stmt.bind([id]);
@@ -383,6 +418,24 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
 
   const lastIdRes = db.exec('SELECT last_insert_rowid() as id');
   const newId = Number(lastIdRes[0].values[0][0]);
+
+  // Sync to Supabase if configured
+  const sb = getSupabaseClient();
+  if (isSupabaseConfigured() && sb) {
+    try {
+      const { id: _id, days_elapsed: _de, is_overdue: _io, ...restPayload } = record;
+      await sb.from('opf_records').upsert({
+        ...restPayload,
+        part_number: partNum,
+        days_elapsed: days,
+        is_overdue: isOverdue,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'dtr_number,part_name' });
+    } catch (sbErr) {
+      console.warn('[SUPABASE] Gagal upsert ke Supabase:', sbErr);
+    }
+  }
+
   return { isNew: true, id: newId };
 }
 
@@ -429,12 +482,30 @@ export async function updateAreaReceipt(id: number, data: {
     if (uploadRes.success && uploadRes.publicUrl) photoUrl = uploadRes.publicUrl;
   }
 
+  const rec = await getOpfById(id);
   const db = await getDb();
   db.run(
     `UPDATE opf_records SET area_received_date = ?, area_received_by = ?, area_photo = COALESCE(NULLIF(?, ''), area_photo), area_notes = ?, tracking_status = 'Not yet shipped', updated_at = datetime('now') WHERE id = ?`,
     [date, data.area_received_by, photoUrl, data.area_notes || '', id]
   );
   saveDb();
+
+  const sb = getSupabaseClient();
+  if (isSupabaseConfigured() && sb && rec) {
+    try {
+      await sb.from('opf_records').update({
+        area_received_date: date,
+        area_received_by: data.area_received_by,
+        area_photo: photoUrl || rec.area_photo || '',
+        area_notes: data.area_notes || '',
+        tracking_status: 'Not yet shipped',
+        updated_at: new Date().toISOString(),
+      }).eq('dtr_number', rec.dtr_number).eq('part_name', rec.part_name);
+    } catch (sbErr) {
+      console.warn('[SUPABASE] Gagal update area receipt ke Supabase:', sbErr);
+    }
+  }
+
   return true;
 }
 
@@ -452,12 +523,30 @@ export async function updateQualityInspection(id: number, data: {
     if (uploadRes.success && uploadRes.publicUrl) photoUrl = uploadRes.publicUrl;
   }
 
+  const rec = await getOpfById(id);
   const db = await getDb();
   db.run(
     `UPDATE opf_records SET quality_checked_date = ?, quality_checked_by = ?, quality_photo = COALESCE(NULLIF(?, ''), quality_photo), quality_notes = ?, pos = COALESCE(NULLIF(?, ''), pos), updated_at = datetime('now') WHERE id = ?`,
     [date, data.quality_checked_by, photoUrl, data.quality_notes || '', data.pos || '', id]
   );
   saveDb();
+
+  const sb = getSupabaseClient();
+  if (isSupabaseConfigured() && sb && rec) {
+    try {
+      await sb.from('opf_records').update({
+        quality_checked_date: date,
+        quality_checked_by: data.quality_checked_by,
+        quality_photo: photoUrl || rec.quality_photo || '',
+        quality_notes: data.quality_notes || '',
+        pos: data.pos || rec.pos || '',
+        updated_at: new Date().toISOString(),
+      }).eq('dtr_number', rec.dtr_number).eq('part_name', rec.part_name);
+    } catch (sbErr) {
+      console.warn('[SUPABASE] Gagal update quality check ke Supabase:', sbErr);
+    }
+  }
+
   return true;
 }
 
@@ -474,13 +563,42 @@ export async function updateDeliveryToHmmi(id: number, data: {
     [data.shipped_date, data.shipping_resi, data.shipping_carrier || '', days, id]
   );
   saveDb();
+
+  const sb = getSupabaseClient();
+  if (isSupabaseConfigured() && sb && rec) {
+    try {
+      await sb.from('opf_records').update({
+        shipped_date: data.shipped_date,
+        shipping_resi: data.shipping_resi,
+        shipping_carrier: data.shipping_carrier || '',
+        tracking_status: 'Delivered',
+        days_elapsed: days,
+        is_overdue: false,
+        updated_at: new Date().toISOString(),
+      }).eq('dtr_number', rec.dtr_number).eq('part_name', rec.part_name);
+    } catch (sbErr) {
+      console.warn('[SUPABASE] Gagal update shipping ke Supabase:', sbErr);
+    }
+  }
+
   return true;
 }
 
 export async function deleteOpfRecord(id: number): Promise<boolean> {
+  const rec = await getOpfById(id);
   const db = await getDb();
   db.run('DELETE FROM opf_records WHERE id = ?', [id]);
   saveDb();
+
+  const sb = getSupabaseClient();
+  if (isSupabaseConfigured() && sb && rec) {
+    try {
+      await sb.from('opf_records').delete().eq('dtr_number', rec.dtr_number).eq('part_name', rec.part_name);
+    } catch (sbErr) {
+      console.warn('[SUPABASE] Gagal delete record di Supabase:', sbErr);
+    }
+  }
+
   return true;
 }
 

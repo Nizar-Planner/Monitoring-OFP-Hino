@@ -22,6 +22,7 @@ import {
   deleteOpfRecord,
   getOpfStats,
   isUsingSupabase,
+  saveDb,
   OpfRecord
 } from './src/server/db.js';
 import { parseAndImportExcel, generateExcelTemplate } from './src/server/excel.js';
@@ -438,22 +439,36 @@ async function startServer() {
   await getDb();
   console.log('[DATABASE] SQLite berhasil dimuat.');
 
-  // SYNC AWAL DARI SUPABASE SAAT SERVER NYALA (Mencegah data terhapus saat Render restart)
+  // SYNC AWAL DARI SUPABASE SAAT SERVER NYALA (Non-blocking agar web server langsung aktif)
   if (isSupabaseConfigured() && supabase) {
-    try {
-      console.log('[SUPABASE] Menarik data terbaru dari Supabase...');
-      const { data: remoteRecords, error } = await supabase.from('opf_records').select('*');
-      if (error) {
-        console.error('[SUPABASE] Gagal sync data dari Supabase:', error.message);
-      } else if (remoteRecords && remoteRecords.length > 0) {
-        await bulkInsertOrUpdateOpf(remoteRecords);
-        console.log(`[SUPABASE] Berhasil menarik ${remoteRecords.length} record dari Supabase ke SQLite lokal.`);
-      } else {
-        console.log('[SUPABASE] Tabel di Supabase kosong atau belum berisi record.');
+    (async () => {
+      try {
+        console.log('[SUPABASE] Menarik data terbaru dari Supabase...');
+        const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
+          setTimeout(() => resolve({ data: null, error: { message: 'Supabase sync timeout (5s)' } }), 5000)
+        );
+        const { data: remoteRecords, error } = (await Promise.race([
+          supabase.from('opf_records').select('*'),
+          timeoutPromise,
+        ])) as any;
+
+        if (error) {
+          console.error('[SUPABASE] Gagal sync data dari Supabase:', error.message);
+        } else if (remoteRecords) {
+          const db = await getDb();
+          db.run('DELETE FROM opf_records');
+          if (remoteRecords.length > 0) {
+            await bulkInsertOrUpdateOpf(remoteRecords);
+            console.log(`[SUPABASE] Berhasil menarik ${remoteRecords.length} record dari Supabase ke SQLite lokal.`);
+          } else {
+            saveDb();
+            console.log('[SUPABASE] Tabel di Supabase kosong, SQLite lokal bersih tanpa data dummy.');
+          }
+        }
+      } catch (syncErr) {
+        console.error('[SUPABASE] Error saat sinkronisasi awal:', syncErr);
       }
-    } catch (syncErr) {
-      console.error('[SUPABASE] Error saat sinkronisasi awal:', syncErr);
-    }
+    })();
   }
 
   if (!isProduction) {

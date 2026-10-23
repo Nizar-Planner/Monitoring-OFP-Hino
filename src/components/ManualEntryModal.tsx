@@ -15,23 +15,23 @@ export const ManualEntryModal: React.FC<ManualEntryModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const [dtrNumber, setDtrNumber] = useState(`TR-2026-JKT-${Math.floor(1000 + Math.random() * 9000)}`);
-  const [partName, setPartName] = useState('Turbocharger Assembly');
-  const [partNumber, setPartNumber] = useState('24100-33120');
+  const [dtrNumber, setDtrNumber] = useState('');
+  const [partName, setPartName] = useState('');
+  const [partNumber, setPartNumber] = useState('');
   const [quantity, setQuantity] = useState(1);
-  const [model, setModel] = useState('Hino 500 FM 260 JD (6x4 Dump)');
-  const [chassisNumber, setChassisNumber] = useState('MHFJ1JGBMK00' + Math.floor(1000 + Math.random() * 9000));
-  const [engineNumber, setEngineNumber] = useState('J08E-WD' + Math.floor(10000 + Math.random() * 90000));
-  const [mileage, setMileage] = useState(38000);
-  const [dealerName, setDealerName] = useState('PT Duta Cemerlang Motors - Jakarta Barat');
-  const [qpiNumber, setQpiNumber] = useState('QPI-HMSI-26-' + Math.floor(100 + Math.random() * 900));
-  const [problem, setProblem] = useState('Suara mendesing dan tenaga mesin drop saat tanjakan');
-  const [pos, setPos] = useState('L2.1');
+  const [model, setModel] = useState('');
+  const [chassisNumber, setChassisNumber] = useState('');
+  const [engineNumber, setEngineNumber] = useState('');
+  const [mileage, setMileage] = useState<number | ''>('');
+  const [dealerName, setDealerName] = useState('');
+  const [qpiNumber, setQpiNumber] = useState('');
+  const [problem, setProblem] = useState('');
+  const [pos, setPos] = useState('');
   const [judgementQpi, setJudgementQpi] = useState('Under Technical Review');
   const [judgementDate, setJudgementDate] = useState(new Date().toISOString().split('T')[0]);
   const [requestDate, setRequestDate] = useState(new Date().toISOString().split('T')[0]);
-  const [occurredDate, setOccurredDate] = useState(new Date().toISOString().split('T')[0]);
-  const [repairDate, setRepairDate] = useState(new Date().toISOString().split('T')[0]);
+  const [occurredDate, setOccurredDate] = useState('');
+  const [repairDate, setRepairDate] = useState('');
   const [trackingStatus, setTrackingStatus] = useState<'Waiting OFP' | 'Not yet shipped' | 'Delivered'>('Waiting OFP');
   const [areaNotes, setAreaNotes] = useState('');
 

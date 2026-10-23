@@ -704,7 +704,7 @@ export const DataTable: React.FC<DataTableProps> = ({
               ))
             ) : (
               <tr>
-                <td colSpan={15} className="py-12 text-center text-slate-500">
+                <td colSpan={18} className="py-12 text-center text-slate-500">
                   <p className="font-semibold text-slate-700">Tidak ada data klaim OFP yang cocok dengan filter.</p>
                   <p className="text-xs text-slate-400 mt-1">Coba ubah kata kunci atau upload file Excel monitoring baru.</p>
                 </td>
