@@ -1,3 +1,9 @@
+import WebSocket from 'ws';
+
+// Inject WebSocket secara global agar dikenali oleh Supabase di Node.js
+if (!globalThis.WebSocket) {
+  (globalThis as any).WebSocket = WebSocket;
+}
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
