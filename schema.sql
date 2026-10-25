@@ -2,8 +2,16 @@
 -- Hino OPF Monitoring & Tracking Dashboard
 -- Skema Tabel Database & Supabase Storage Bucket Setup
 -- ==============================================================================
--- Jalankan skrip SQL ini di Supabase Dashboard -> SQL Editor
--- untuk membuat tabel `opf_records` dan storage bucket `opf-attachments`.
+-- 
+-- KHUSUS JIKA DATABASE SUPABASE SUDAH ADA & INGIN MENAMBAHKAN 4 KOLOM BARU:
+-- (problem, pos, occurred_date, repair_date)
+-- Cukup salin & jalankan 4 baris SQL di bawah ini di Supabase SQL Editor:
+-- ------------------------------------------------------------------------------
+ALTER TABLE public.opf_records ADD COLUMN IF NOT EXISTS problem TEXT DEFAULT '';
+ALTER TABLE public.opf_records ADD COLUMN IF NOT EXISTS pos TEXT DEFAULT '';
+ALTER TABLE public.opf_records ADD COLUMN IF NOT EXISTS occurred_date DATE DEFAULT NULL;
+ALTER TABLE public.opf_records ADD COLUMN IF NOT EXISTS repair_date DATE DEFAULT NULL;
+-- ------------------------------------------------------------------------------
 
 -- 1. Tabel Utama Rekaman Klaim & Monitoring Part OPF (HMSI -> HMMI / HML)
 CREATE TABLE IF NOT EXISTS public.opf_records (

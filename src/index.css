@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 @media print {
   @page {
     size: A4 portrait;

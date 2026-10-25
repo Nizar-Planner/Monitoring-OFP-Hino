@@ -8,7 +8,8 @@ import {
   ArrowRight,
   ShieldAlert,
   ChevronRight,
-  Bell
+  Bell,
+  Layers
 } from 'lucide-react';
 import { StatsData, TrackingStatus } from '../types';
 
@@ -39,16 +40,16 @@ export const WorkflowTrackerCards: React.FC<WorkflowTrackerCardsProps> = ({
   const deliveredPct = total > 0 ? Math.round((delivered / total) * 100) : 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full">
       {/* Critical SLA Alert Banner: Overdue > 30 Days */}
       {overdueCount > 0 && (
-        <div className="bg-red-600 text-white rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
+        <div className="bg-red-600 text-white rounded-xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 animate-fade-in w-full">
           <div className="flex items-start sm:items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
               <AlertOctagon className="w-6 h-6 text-white" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-extrabold text-sm sm:text-base tracking-tight">
                   PERINGATAN KRITIS: {overdueCount} KLAIM OFP MELEBIHI 30 HARI!
                 </span>
@@ -56,7 +57,7 @@ export const WorkflowTrackerCards: React.FC<WorkflowTrackerCardsProps> = ({
                   Batas Supplier
                 </span>
               </div>
-              <p className="text-xs text-red-100 mt-0.5 max-w-3xl">
+              <p className="text-xs text-red-100 mt-1 max-w-3xl leading-relaxed">
                 Part yang melebihi leadtime 30 hari berisiko tinggi di-<strong>REJECT oleh Supplier HMMI/HML</strong> dengan alasan <em>&ldquo;OFP Not Return&rdquo;</em>. Segera lakukan penarikan fisik dari dealer atau pengiriman ke supplier.
               </p>
             </div>
@@ -64,7 +65,7 @@ export const WorkflowTrackerCards: React.FC<WorkflowTrackerCardsProps> = ({
 
           <button
             onClick={onToggleOverdueFilter}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap shadow-xs ${
+            className={`w-full sm:w-auto px-4 py-2.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap shadow-xs cursor-pointer text-center ${
               isOverdueFilterActive
                 ? 'bg-slate-900 text-white ring-2 ring-white'
                 : 'bg-white text-red-700 hover:bg-red-50'
@@ -77,127 +78,162 @@ export const WorkflowTrackerCards: React.FC<WorkflowTrackerCardsProps> = ({
 
       {/* Internal Notification for Tim Quality */}
       {pendingQuality > 0 && (
-        <div className="bg-blue-50 border border-blue-200 text-blue-900 rounded-xl px-4 py-3 flex items-center justify-between gap-3 text-xs">
+        <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs w-full">
           <div className="flex items-center gap-2.5">
-            <Bell className="w-4 h-4 text-blue-600 animate-bounce shrink-0" />
+            <Bell className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-bounce shrink-0" />
             <span>
               <strong>Notifikasi Tim Quality:</strong> Ada <strong>{pendingQuality} part OFP</strong> yang sudah diterima Tim Area di HMSI dan sedang menunggu pemeriksaan fisik &amp; foto verifikasi Tim Quality!
             </span>
           </div>
           <button
             onClick={() => onSelectStatusFilter('Not yet shipped')}
-            className="text-xs font-bold text-blue-700 hover:underline shrink-0"
+            className="text-xs font-bold text-blue-700 dark:text-blue-400 hover:underline shrink-0 text-left sm:text-right cursor-pointer"
           >
             Lihat Part &rarr;
           </button>
         </div>
       )}
 
-      {/* 3 Status Tracking Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* 4 Metric Cards: grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 w-full">
         
-        {/* Card 1: Belum Terkirim / Waiting OFP */}
+        {/* Card 1: Total Klaim (Semua Data) */}
         <button
-          onClick={() => onSelectStatusFilter((activeStatusFilter === 'Belum Terkirim' || activeStatusFilter === 'Waiting OFP') ? 'all' : 'Belum Terkirim')}
-          className={`text-left p-5 rounded-xl border transition-all relative overflow-hidden bg-white ${
-            (activeStatusFilter === 'Belum Terkirim' || activeStatusFilter === 'Waiting OFP') && !isOverdueFilterActive
-              ? 'border-amber-500 ring-2 ring-amber-500/20 shadow-md'
-              : 'border-slate-200 hover:border-slate-300 hover:shadow-xs'
+          onClick={() => onSelectStatusFilter('all')}
+          className={`text-left p-4 sm:p-5 rounded-xl border transition-all relative overflow-hidden bg-white dark:bg-slate-900 cursor-pointer ${
+            activeStatusFilter === 'all' && !isOverdueFilterActive
+              ? 'border-red-500 ring-2 ring-red-500/20 shadow-md'
+              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-xs'
           }`}
         >
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
-                <Clock className="w-5 h-5" />
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-lg bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                <Layers className="w-5 h-5" />
               </div>
-              <div>
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Status 1</span>
-                <span className="text-sm font-bold text-slate-900">Belum Terkirim</span>
+              <div className="min-w-0">
+                <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Total Data</span>
+                <span className="text-sm font-bold text-slate-900 dark:text-white truncate block">Semua Part OFP</span>
               </div>
             </div>
-            <span className="text-2xl font-extrabold text-amber-600 font-mono tabular-nums">
+            <span className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono tabular-nums shrink-0 ml-2">
+              {total}
+            </span>
+          </div>
+
+          <div className="mt-3.5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <span>Klaim: <strong className="text-slate-800 dark:text-slate-200 font-mono">100%</strong> aktif</span>
+            <span className="flex items-center gap-0.5 text-red-600 dark:text-red-400 font-semibold text-[11px]">
+              Tampilkan semua <ChevronRight className="w-3.5 h-3.5" />
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 line-clamp-2">
+            Seluruh data klaim part OFP terdaftar dari file Excel monitoring dealer.
+          </p>
+        </button>
+
+        {/* Card 2: Belum Terkirim / Waiting OFP */}
+        <button
+          onClick={() => onSelectStatusFilter((activeStatusFilter === 'Belum Terkirim' || activeStatusFilter === 'Waiting OFP') ? 'all' : 'Belum Terkirim')}
+          className={`text-left p-4 sm:p-5 rounded-xl border transition-all relative overflow-hidden bg-white dark:bg-slate-900 cursor-pointer ${
+            (activeStatusFilter === 'Belum Terkirim' || activeStatusFilter === 'Waiting OFP') && !isOverdueFilterActive
+              ? 'border-amber-500 ring-2 ring-amber-500/20 shadow-md'
+              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-xs'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Status 1</span>
+                <span className="text-sm font-bold text-slate-900 dark:text-white truncate block">Belum Terkirim</span>
+              </div>
+            </div>
+            <span className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 font-mono tabular-nums shrink-0 ml-2">
               {waitingOfp}
             </span>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Porsi: <strong className="text-slate-800 font-mono">{waitingPct}%</strong> dari total</span>
-            <span className="flex items-center gap-0.5 text-amber-700 font-medium">
+          <div className="mt-3.5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <span>Porsi: <strong className="text-slate-800 dark:text-slate-200 font-mono">{waitingPct}%</strong></span>
+            <span className="flex items-center gap-0.5 text-amber-700 dark:text-amber-400 font-semibold text-[11px]">
               Filter status <ChevronRight className="w-3.5 h-3.5" />
             </span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-2 line-clamp-2">
-            Kolom <em>OFP Receive</em> dan <em>OFP Send to HMMI</em> kosong di Excel. Part masih berada di bengkel dealer.
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 line-clamp-2">
+            Kolom <em>OFP Receive</em> kosong di Excel. Part masih berada di bengkel dealer.
           </p>
         </button>
 
-        {/* Card 2: Received by Area */}
+        {/* Card 3: Received by Area */}
         <button
           onClick={() => onSelectStatusFilter((activeStatusFilter === 'Received by Area' || activeStatusFilter === 'Not yet shipped') ? 'all' : 'Received by Area')}
-          className={`text-left p-5 rounded-xl border transition-all relative overflow-hidden bg-white ${
+          className={`text-left p-4 sm:p-5 rounded-xl border transition-all relative overflow-hidden bg-white dark:bg-slate-900 cursor-pointer ${
             (activeStatusFilter === 'Received by Area' || activeStatusFilter === 'Not yet shipped') && !isOverdueFilterActive
               ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-md'
-              : 'border-slate-200 hover:border-slate-300 hover:shadow-xs'
+              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-xs'
           }`}
         >
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 flex items-center justify-center shrink-0">
                 <Package className="w-5 h-5" />
               </div>
-              <div>
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Status 2</span>
-                <span className="text-sm font-bold text-slate-900">Received by Area</span>
+              <div className="min-w-0">
+                <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Status 2</span>
+                <span className="text-sm font-bold text-slate-900 dark:text-white truncate block">Received Area</span>
               </div>
             </div>
-            <span className="text-2xl font-extrabold text-blue-600 font-mono tabular-nums">
+            <span className="text-2xl font-extrabold text-blue-600 dark:text-blue-400 font-mono tabular-nums shrink-0 ml-2">
               {notYetShipped}
             </span>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Porsi: <strong className="text-slate-800 font-mono">{notYetPct}%</strong> dari total</span>
-            <span className="flex items-center gap-0.5 text-blue-700 font-medium">
+          <div className="mt-3.5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <span>Porsi: <strong className="text-slate-800 dark:text-slate-200 font-mono">{notYetPct}%</strong></span>
+            <span className="flex items-center gap-0.5 text-blue-700 dark:text-blue-400 font-semibold text-[11px]">
               Filter status <ChevronRight className="w-3.5 h-3.5" />
             </span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-2 line-clamp-2">
-            Kolom <em>OFP Receive</em> terisi tanggal di Excel. Part fisik telah diterima Tim Area di HMSI.
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 line-clamp-2">
+            Kolom <em>OFP Receive</em> terisi di Excel. Part fisik telah diterima Tim Area di HMSI.
           </p>
         </button>
 
-        {/* Card 3: Sent to HMMI */}
+        {/* Card 4: Sent to HMMI */}
         <button
           onClick={() => onSelectStatusFilter((activeStatusFilter === 'Sent to HMMI' || activeStatusFilter === 'Delivered') ? 'all' : 'Sent to HMMI')}
-          className={`text-left p-5 rounded-xl border transition-all relative overflow-hidden bg-white ${
+          className={`text-left p-4 sm:p-5 rounded-xl border transition-all relative overflow-hidden bg-white dark:bg-slate-900 cursor-pointer ${
             (activeStatusFilter === 'Sent to HMMI' || activeStatusFilter === 'Delivered') && !isOverdueFilterActive
               ? 'border-emerald-500 ring-2 ring-emerald-500/20 shadow-md'
-              : 'border-slate-200 hover:border-slate-300 hover:shadow-xs'
+              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-xs'
           }`}
         >
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
                 <Truck className="w-5 h-5" />
               </div>
-              <div>
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Status 3</span>
-                <span className="text-sm font-bold text-slate-900">Sent to HMMI</span>
+              <div className="min-w-0">
+                <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Status 3</span>
+                <span className="text-sm font-bold text-slate-900 dark:text-white truncate block">Sent to HMMI</span>
               </div>
             </div>
-            <span className="text-2xl font-extrabold text-emerald-600 font-mono tabular-nums">
+            <span className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums shrink-0 ml-2">
               {delivered}
             </span>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Porsi: <strong className="text-slate-800 font-mono">{deliveredPct}%</strong> dari total</span>
-            <span className="flex items-center gap-0.5 text-emerald-700 font-medium">
+          <div className="mt-3.5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <span>Porsi: <strong className="text-slate-800 dark:text-slate-200 font-mono">{deliveredPct}%</strong></span>
+            <span className="flex items-center gap-0.5 text-emerald-700 dark:text-emerald-400 font-semibold text-[11px]">
               Filter status <ChevronRight className="w-3.5 h-3.5" />
             </span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-2 line-clamp-2">
-            Kolom <em>OFP Send to HMMI</em> terisi tanggal di Excel. Part fisik telah dikirimkan ke Supplier Pabrik HMMI / HML.
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 line-clamp-2">
+            Kolom <em>OFP Send to HMMI</em> terisi. Part fisik telah dikirimkan ke Supplier Pabrik HMMI/HML.
           </p>
         </button>
 

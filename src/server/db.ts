@@ -31,6 +31,79 @@ export function calculateDaysElapsed(requestDateStr: string, shippedDateStr?: st
   return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
 
+let cachedSupabaseColumns: Set<string> | null = null;
+let lastSupabaseColumnsCheck = 0;
+
+export async function getSupabaseColumns(forceRefresh = false): Promise<Set<string>> {
+  const now = Date.now();
+  if (!forceRefresh && cachedSupabaseColumns && now - lastSupabaseColumnsCheck < 60000) {
+    return cachedSupabaseColumns;
+  }
+  const sb = getSupabaseClient();
+  if (!sb) return new Set();
+
+  try {
+    const { data, error } = await sb.from('opf_records').select('*').limit(1);
+    if (!error && data && data.length > 0) {
+      cachedSupabaseColumns = new Set(Object.keys(data[0]));
+      lastSupabaseColumnsCheck = now;
+    }
+  } catch (_e) {
+    // ignore
+  }
+  return cachedSupabaseColumns || new Set();
+}
+
+export function filterRecordForSupabase(
+  recordPayload: Record<string, any>,
+  availableCols: Set<string>
+): Record<string, any> {
+  if (!availableCols || availableCols.size === 0) {
+    return recordPayload;
+  }
+  const filtered: Record<string, any> = {};
+  for (const [key, val] of Object.entries(recordPayload)) {
+    if (availableCols.has(key)) {
+      filtered[key] = val;
+    }
+  }
+  return filtered;
+}
+
+export async function syncRecordToSupabase(record: OpfRecord, days: number, isOverdue: boolean): Promise<void> {
+  const sb = getSupabaseClient();
+  if (!isSupabaseConfigured() || !sb) return;
+
+  try {
+    const cols = await getSupabaseColumns();
+    const { id: _id, days_elapsed: _de, is_overdue: _io, created_at: _ca, ...restPayload } = record;
+    const rawPayload: Record<string, any> = {
+      ...restPayload,
+      days_elapsed: days,
+      is_overdue: isOverdue,
+      updated_at: new Date().toISOString(),
+    };
+
+    const payload = filterRecordForSupabase(rawPayload, cols);
+
+    // Cek apakah data sudah ada di Supabase berdasarkan dtr_number dan part_name
+    const { data: existingSb } = await sb
+      .from('opf_records')
+      .select('id')
+      .eq('dtr_number', record.dtr_number)
+      .eq('part_name', record.part_name)
+      .limit(1);
+
+    if (existingSb && existingSb.length > 0) {
+      await sb.from('opf_records').update(payload).eq('id', existingSb[0].id);
+    } else {
+      await sb.from('opf_records').insert([payload]);
+    }
+  } catch (sbErr) {
+    console.warn('[SUPABASE] Gagal sync record ke Supabase:', sbErr);
+  }
+}
+
 export async function getDb(): Promise<Database> {
   if (dbInstance) return dbInstance;
 
@@ -376,6 +449,17 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
         existing.id
       ]
     );
+    saveDb();
+    await syncRecordToSupabase({
+      ...existing,
+      ...record,
+      part_number: partNum,
+      tracking_status: record.tracking_status || existing.tracking_status,
+      problem: record.problem ?? existing.problem ?? '',
+      pos: record.pos ?? existing.pos ?? '',
+      occurred_date: record.occurred_date ?? existing.occurred_date ?? null,
+      repair_date: record.repair_date ?? existing.repair_date ?? null,
+    }, days, isOverdue);
     return { isNew: false, id: Number(existing.id) };
   }
 
@@ -418,23 +502,13 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
 
   const lastIdRes = db.exec('SELECT last_insert_rowid() as id');
   const newId = Number(lastIdRes[0].values[0][0]);
+  saveDb();
 
   // Sync to Supabase if configured
-  const sb = getSupabaseClient();
-  if (isSupabaseConfigured() && sb) {
-    try {
-      const { id: _id, days_elapsed: _de, is_overdue: _io, ...restPayload } = record;
-      await sb.from('opf_records').upsert({
-        ...restPayload,
-        part_number: partNum,
-        days_elapsed: days,
-        is_overdue: isOverdue,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'dtr_number,part_name' });
-    } catch (sbErr) {
-      console.warn('[SUPABASE] Gagal upsert ke Supabase:', sbErr);
-    }
-  }
+  await syncRecordToSupabase({
+    ...record,
+    part_number: partNum,
+  }, days, isOverdue);
 
   return { isNew: true, id: newId };
 }
@@ -493,14 +567,17 @@ export async function updateAreaReceipt(id: number, data: {
   const sb = getSupabaseClient();
   if (isSupabaseConfigured() && sb && rec) {
     try {
-      await sb.from('opf_records').update({
+      const cols = await getSupabaseColumns();
+      const rawPayload = {
         area_received_date: date,
         area_received_by: data.area_received_by,
         area_photo: photoUrl || rec.area_photo || '',
         area_notes: data.area_notes || '',
         tracking_status: 'Not yet shipped',
         updated_at: new Date().toISOString(),
-      }).eq('dtr_number', rec.dtr_number).eq('part_name', rec.part_name);
+      };
+      const payload = filterRecordForSupabase(rawPayload, cols);
+      await sb.from('opf_records').update(payload).eq('dtr_number', rec.dtr_number).eq('part_name', rec.part_name);
     } catch (sbErr) {
       console.warn('[SUPABASE] Gagal update area receipt ke Supabase:', sbErr);
     }
@@ -534,14 +611,17 @@ export async function updateQualityInspection(id: number, data: {
   const sb = getSupabaseClient();
   if (isSupabaseConfigured() && sb && rec) {
     try {
-      await sb.from('opf_records').update({
+      const cols = await getSupabaseColumns();
+      const rawPayload = {
         quality_checked_date: date,
         quality_checked_by: data.quality_checked_by,
         quality_photo: photoUrl || rec.quality_photo || '',
         quality_notes: data.quality_notes || '',
         pos: data.pos || rec.pos || '',
         updated_at: new Date().toISOString(),
-      }).eq('dtr_number', rec.dtr_number).eq('part_name', rec.part_name);
+      };
+      const payload = filterRecordForSupabase(rawPayload, cols);
+      await sb.from('opf_records').update(payload).eq('dtr_number', rec.dtr_number).eq('part_name', rec.part_name);
     } catch (sbErr) {
       console.warn('[SUPABASE] Gagal update quality check ke Supabase:', sbErr);
     }
@@ -567,7 +647,8 @@ export async function updateDeliveryToHmmi(id: number, data: {
   const sb = getSupabaseClient();
   if (isSupabaseConfigured() && sb && rec) {
     try {
-      await sb.from('opf_records').update({
+      const cols = await getSupabaseColumns();
+      const rawPayload = {
         shipped_date: data.shipped_date,
         shipping_resi: data.shipping_resi,
         shipping_carrier: data.shipping_carrier || '',
@@ -575,7 +656,9 @@ export async function updateDeliveryToHmmi(id: number, data: {
         days_elapsed: days,
         is_overdue: false,
         updated_at: new Date().toISOString(),
-      }).eq('dtr_number', rec.dtr_number).eq('part_name', rec.part_name);
+      };
+      const payload = filterRecordForSupabase(rawPayload, cols);
+      await sb.from('opf_records').update(payload).eq('dtr_number', rec.dtr_number).eq('part_name', rec.part_name);
     } catch (sbErr) {
       console.warn('[SUPABASE] Gagal update shipping ke Supabase:', sbErr);
     }

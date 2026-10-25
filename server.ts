@@ -23,6 +23,7 @@ import {
   getOpfStats,
   isUsingSupabase,
   saveDb,
+  getSupabaseColumns,
   OpfRecord
 } from './src/server/db.js';
 import { parseAndImportExcel, generateExcelTemplate } from './src/server/excel.js';
@@ -82,16 +83,53 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-// 1b. Supabase Status Details
-app.get('/api/supabase/status', (_req, res) => {
+// 1b. Supabase Status Details with Column Sync Inspection
+app.get('/api/supabase/status', async (_req, res) => {
   const configured = isSupabaseConfigured();
   const active = isUsingSupabase();
+  const requiredColumns = ['problem', 'pos', 'occurred_date', 'repair_date'];
+  let missingColumns: string[] = [];
+  let availableColumns: string[] = [];
+
+  if (active) {
+    const cols = await getSupabaseColumns(false);
+    availableColumns = Array.from(cols);
+    missingColumns = requiredColumns.filter((col) => !cols.has(col));
+  }
+
+  const migrationSql = `-- =======================================================
+-- EKSEKUSI DI SUPABASE DASHBOARD -> SQL EDITOR
+-- Menambahkan 4 kolom baru agar sama persis dengan Web
+-- =======================================================
+ALTER TABLE public.opf_records ADD COLUMN IF NOT EXISTS problem TEXT DEFAULT '';
+ALTER TABLE public.opf_records ADD COLUMN IF NOT EXISTS pos TEXT DEFAULT '';
+ALTER TABLE public.opf_records ADD COLUMN IF NOT EXISTS occurred_date DATE DEFAULT NULL;
+ALTER TABLE public.opf_records ADD COLUMN IF NOT EXISTS repair_date DATE DEFAULT NULL;`;
+
   res.json({
     success: true,
     configured,
     active,
     url: configured ? SUPABASE_URL : null,
     bucket: SUPABASE_STORAGE_BUCKET,
+    isSchemaSynced: active ? missingColumns.length === 0 : true,
+    missingColumns,
+    availableColumns,
+    migrationSql,
+  });
+});
+
+// 1b-2. Force Refresh Supabase Schema Check
+app.post('/api/supabase/refresh-schema', async (_req, res) => {
+  const cols = await getSupabaseColumns(true);
+  const requiredColumns = ['problem', 'pos', 'occurred_date', 'repair_date'];
+  const missing = requiredColumns.filter((col) => !cols.has(col));
+  res.json({
+    success: true,
+    isSchemaSynced: missing.length === 0,
+    missingColumns: missing,
+    totalColumns: cols.size,
+    columns: Array.from(cols),
   });
 });
 

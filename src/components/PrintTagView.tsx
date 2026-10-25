@@ -87,119 +87,31 @@ export const PrintTagView: React.FC<PrintTagViewProps> = ({
 
   /**
    * 1. Cetak Langsung ke Printer Fisik
-   * Menggunakan teknik isolated printable iframe dan direct window.print fallback
+   * Membuka native print dialog browser (window.print) untuk memilih printer fisik (Canon, Epson, HP, Brother, dll)
    */
   const handleDirectPrint = () => {
     if (tagList.length === 0) return;
     setIsPrinting(true);
     setStatusMessage({
       type: 'info',
-      title: 'Mempersiapkan Cetak ke Printer...',
-      description: 'Membuka dialog cetak printer langsung. Pastikan kertas diatur ke A4 Portrait.',
+      title: 'Membuka Dialog Printer...',
+      description: 'Pilih printer tujuan pada jendela dialog browser. Pastikan kertas diatur ke A4 Portrait.',
     });
 
-    try {
-      const container = printContainerRef.current;
-      const oldIframe = document.getElementById('opf-print-iframe');
-      if (oldIframe) {
-        oldIframe.remove();
-      }
+    // Listener otomatis untuk me-reset state setelah dialog printer ditutup
+    const cleanupAfterPrint = () => {
+      setIsPrinting(false);
+      window.removeEventListener('afterprint', cleanupAfterPrint);
+    };
+    window.addEventListener('afterprint', cleanupAfterPrint);
 
-      // Buat iframe terisolasi agar dialog cetak langsung muncul tanpa terhalang sandbox
-      const iframe = document.createElement('iframe');
-      iframe.id = 'opf-print-iframe';
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = '0';
-      iframe.style.visibility = 'hidden';
-      document.body.appendChild(iframe);
-
-      const iframeDoc = iframe.contentWindow?.document;
-      if (iframeDoc && container) {
-        iframeDoc.open();
-        // Kumpulkan styles aplikasi
-        const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
-          .map((el) => el.outerHTML)
-          .join('\n');
-
-        iframeDoc.write(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <meta charset="utf-8" />
-              <title>Print Original Failure Part Tag - HMSI</title>
-              ${styles}
-              <style>
-                @page {
-                  size: A4 portrait;
-                  margin: 6mm 5mm;
-                }
-                body {
-                  margin: 0;
-                  padding: 0;
-                  background: #ffffff !important;
-                  color: #000000 !important;
-                  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                  -webkit-print-color-adjust: exact !important;
-                  print-color-adjust: exact !important;
-                }
-                .opf-pdf-page {
-                  page-break-after: always;
-                  break-after: page;
-                  padding: 6mm 5mm;
-                  box-sizing: border-box;
-                }
-                .opf-pdf-page:last-child {
-                  page-break-after: avoid;
-                  break-after: avoid;
-                }
-                .tag-grid {
-                  display: grid !important;
-                  grid-template-columns: repeat(3, 1fr) !important;
-                  gap: 3.5mm !important;
-                }
-                .print-tag-card {
-                  break-inside: avoid !important;
-                  page-break-inside: avoid !important;
-                  border: 1.5px solid #000 !important;
-                  background: #ffffff !important;
-                }
-              </style>
-            </head>
-            <body>
-              ${container.innerHTML}
-            </body>
-          </html>
-        `);
-        iframeDoc.close();
-
-        setTimeout(() => {
-          try {
-            iframe.contentWindow?.focus();
-            iframe.contentWindow?.print();
-          } catch (e) {
-            console.warn('Iframe print error, falling back to window.print():', e);
-            window.focus();
-            window.print();
-          }
-          setIsPrinting(false);
-        }, 350);
-        return;
-      }
-
-      // Fallback
+    // Timeout singkat agar UI state sempat ter-render sebelum dialog cetak native muncul
+    setTimeout(() => {
       window.focus();
       window.print();
-    } catch (err) {
-      console.error('Print trigger error:', err);
-      window.focus();
-      window.print();
-    } finally {
-      setTimeout(() => setIsPrinting(false), 1000);
-    }
+      // Fallback timer untuk memastikan isPrinting kembali false
+      setTimeout(() => setIsPrinting(false), 2000);
+    }, 150);
   };
 
   /**
@@ -276,38 +188,46 @@ export const PrintTagView: React.FC<PrintTagViewProps> = ({
             color: #000000 !important;
             margin: 0 !important;
             padding: 0 !important;
+            width: 100% !important;
             font-size: 11px !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
 
-          /* Sembunyikan semua elemen UI dashboard, modal backdrop, scrollbar */
-          .no-print,
-          header,
-          footer,
-          nav,
-          main,
-          aside,
-          .print-tag-backdrop {
-            display: none !important;
+          /* Sembunyikan semua elemen UI layar, header, footer, modal */
+          body * {
+            visibility: hidden !important;
           }
 
-          /* Tampilkan area render cetak */
+          /* Tampilkan HANYA kontainer lembar cetak tag part */
+          #opf-printable-sheet,
+          #opf-printable-sheet * {
+            visibility: visible !important;
+          }
+
           #opf-printable-sheet {
-            position: static !important;
-            left: auto !important;
-            top: auto !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
             width: 100% !important;
-            z-index: auto !important;
-            pointer-events: auto !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
             display: block !important;
+            z-index: 999999 !important;
+            background: #ffffff !important;
+            pointer-events: auto !important;
           }
 
           .opf-pdf-page {
+            width: 100% !important;
+            max-width: 100% !important;
             min-height: auto !important;
             padding: 4mm 2mm !important;
+            box-sizing: border-box !important;
             page-break-after: always !important;
             break-after: page !important;
+            background: #ffffff !important;
           }
 
           .opf-pdf-page:last-child {
@@ -338,9 +258,9 @@ export const PrintTagView: React.FC<PrintTagViewProps> = ({
           PREVIEW MODAL UI (Terlihat di layar browser, otomatis hidden saat print)
           ========================================================================= */}
       <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 print-tag-backdrop no-print">
-        <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[92vh] shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-6xl max-h-[92vh] my-auto shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
           {/* Modal Header Bar */}
-          <div className="px-6 py-4 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 shrink-0">
+          <div className="px-5 sm:px-6 py-4 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-800 shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center text-white shadow-sm font-black shrink-0">
                 <Tag className="w-5 h-5" />
@@ -361,7 +281,7 @@ export const PrintTagView: React.FC<PrintTagViewProps> = ({
             </div>
 
             {/* Direct Action Buttons: Print via Printer & Save as PDF */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
               {/* Button 1: Cetak ke Printer */}
               <button
                 type="button"
@@ -416,24 +336,24 @@ export const PrintTagView: React.FC<PrintTagViewProps> = ({
           </div>
 
           {/* Action & Info Strip */}
-          <div className="px-6 py-2.5 bg-slate-100 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
-            <div className="flex items-center gap-2 text-slate-700">
-              <Info className="w-4 h-4 text-blue-600 shrink-0" />
+          <div className="px-6 py-2.5 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
+            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200">
+              <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
               <span>
                 Total <strong>{tagList.length} tag</strong> siap dicetak untuk unit{' '}
                 <strong>HMSI-Field Quality</strong> ({tagPages.length} Halaman A4).
               </span>
             </div>
 
-            <div className="flex items-center gap-2 text-[11px] text-slate-600">
-              <span className="bg-white text-slate-700 px-2.5 py-0.5 rounded font-medium border border-slate-200 shadow-2xs">
+            <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+              <span className="bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-2.5 py-0.5 rounded font-medium border border-slate-200 dark:border-slate-600 shadow-2xs">
                 Format Cetak: <strong>Kertas A4 (3 Kolom per Baris)</strong>
               </span>
             </div>
           </div>
 
-          {/* Scrollable Preview Area (Simulasi lembar kertas A4 dihilangkan) */}
-          <div className="p-5 sm:p-6 overflow-y-auto bg-slate-50 flex-1">
+          {/* Scrollable Preview Area (Simulasi lembar kertas A4) */}
+          <div className="p-5 sm:p-6 overflow-y-auto bg-slate-100 dark:bg-slate-950 flex-1">
             {/* Interactive Status & Feedback Banner */}
             {statusMessage && (
               <div
@@ -696,9 +616,7 @@ export const SingleTagCard: React.FC<SingleTagCardProps> = ({
   const rawQpiNo = getSafeValue(record.qpi_number);
   const qpiInfo = formatQpiDisplay(rawQpiNo);
   const partName = getSafeValue(record.part_name);
-  const problem = getSafeValue(
-    record.problem || record.judgement_qpi || record.quality_notes || record.area_notes
-  );
+  const problem = getSafeValue(record.problem, '-');
   const chassisNo = getSafeValue(record.chassis_number);
   const engineNo = getSafeValue(record.engine_number);
   const km = record.mileage ? `${record.mileage.toLocaleString('id-ID')} km` : '-';

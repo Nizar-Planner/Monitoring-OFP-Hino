@@ -181,24 +181,24 @@ export const DataTable: React.FC<DataTableProps> = ({
       case 'Belum Terkirim':
       case 'Waiting OFP':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-            <Clock className="w-3 h-3 text-amber-600" />
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900/60">
+            <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />
             <span>Belum Terkirim</span>
           </span>
         );
       case 'Received by Area':
       case 'Not yet shipped':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-            <Building className="w-3 h-3 text-blue-600" />
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-800 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900/60">
+            <Building className="w-3 h-3 text-blue-600 dark:text-blue-400" />
             <span>Received by Area</span>
           </span>
         );
       case 'Sent to HMMI':
       case 'Delivered':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-            <Truck className="w-3 h-3 text-emerald-600" />
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-900/60">
+            <Truck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
             <span>Sent to HMMI</span>
           </span>
         );
@@ -210,7 +210,7 @@ export const DataTable: React.FC<DataTableProps> = ({
   const renderDaysBadge = (days: number, isOverdue: boolean, isDelivered: boolean) => {
     if (isDelivered) {
       return (
-        <span className="font-mono text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+        <span className="font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">
           {days} hr (Selesai)
         </span>
       );
@@ -218,8 +218,8 @@ export const DataTable: React.FC<DataTableProps> = ({
 
     if (isOverdue) {
       return (
-        <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded border border-red-300 animate-pulse" title="Lebih dari 30 hari! Berisiko ditolak supplier!">
-          <AlertTriangle className="w-3 h-3 text-red-600 shrink-0" />
+        <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-950/60 px-2 py-0.5 rounded border border-red-300 dark:border-red-800 animate-pulse" title="Lebih dari 30 hari! Berisiko ditolak supplier!">
+          <AlertTriangle className="w-3 h-3 text-red-600 dark:text-red-400 shrink-0" />
           <span>{days} hr (OVERDUE)</span>
         </span>
       );
@@ -227,28 +227,28 @@ export const DataTable: React.FC<DataTableProps> = ({
 
     if (days >= 20) {
       return (
-        <span className="font-mono text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200" title="Mendekati batas 30 hari">
+        <span className="font-mono text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800" title="Mendekati batas 30 hari">
           {days} hr
         </span>
       );
     }
 
     return (
-      <span className="font-mono text-xs font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+      <span className="font-mono text-xs font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
         {days} hr
       </span>
     );
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden w-full">
       
       {/* Table Toolbar */}
-      <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-50/50 space-y-3">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="p-3 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 space-y-3 w-full">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4 w-full">
           
           {/* Search Box */}
-          <div className="relative flex-1 max-w-lg">
+          <div className="relative flex-1 w-full lg:max-w-lg min-w-0">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
@@ -257,13 +257,13 @@ export const DataTable: React.FC<DataTableProps> = ({
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="Cari TR_No, Part, Part Number, Chassis, Engine_No, DLR, QPI Number..."
-              className="w-full pl-9 pr-9 py-2 text-xs sm:text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 text-slate-900 placeholder-slate-400"
+              placeholder="Cari TR_No, Part, Part Number, Chassis, Engine_No, DLR, QPI..."
+              className="w-full pl-9 pr-9 py-2 text-xs sm:text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -271,7 +271,7 @@ export const DataTable: React.FC<DataTableProps> = ({
           </div>
 
           {/* Quick Filters */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
             
             {/* Dealer Filter Dropdown */}
             <select
@@ -280,7 +280,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                 setSelectedDealer(e.target.value);
                 setCurrentPage(1);
               }}
-              className="px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-red-500 max-w-[180px] sm:max-w-[220px] truncate cursor-pointer"
             >
               <option value="all">Semua DLR ({dealersList.length})</option>
               {dealersList.map((dealer) => (
@@ -296,10 +296,10 @@ export const DataTable: React.FC<DataTableProps> = ({
                 setIsOverdueFilterActive(!isOverdueFilterActive);
                 setCurrentPage(1);
               }}
-              className={`px-3 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
                 isOverdueFilterActive
                   ? 'bg-red-600 text-white shadow-xs'
-                  : 'bg-white text-red-700 border border-red-300 hover:bg-red-50'
+                  : 'bg-white dark:bg-slate-800 text-red-700 dark:text-red-400 border border-red-300 dark:border-red-900/60 hover:bg-red-50 dark:hover:bg-red-950/40'
               }`}
             >
               <AlertTriangle className="w-3.5 h-3.5" />
@@ -307,16 +307,16 @@ export const DataTable: React.FC<DataTableProps> = ({
             </button>
 
             {/* Status Segmented Buttons */}
-            <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-lg text-xs font-medium">
+            <div className="flex flex-wrap items-center gap-1 bg-slate-200/80 dark:bg-slate-800 p-0.5 rounded-lg text-xs font-medium">
               <button
                 onClick={() => {
                   setStatusFilter('all');
                   setCurrentPage(1);
                 }}
-                className={`px-2.5 py-1.5 rounded-md transition-colors ${
+                className={`px-2.5 py-1.5 rounded-md transition-colors cursor-pointer ${
                   statusFilter === 'all' && !isOverdueFilterActive
-                    ? 'bg-white text-slate-900 font-semibold shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-semibold shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Semua
@@ -327,10 +327,10 @@ export const DataTable: React.FC<DataTableProps> = ({
                   setIsOverdueFilterActive(false);
                   setCurrentPage(1);
                 }}
-                className={`px-2.5 py-1.5 rounded-md transition-colors ${
+                className={`px-2.5 py-1.5 rounded-md transition-colors cursor-pointer ${
                   (statusFilter === 'Belum Terkirim' || statusFilter === 'Waiting OFP')
                     ? 'bg-amber-600 text-white font-semibold'
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Belum Terkirim
@@ -341,13 +341,13 @@ export const DataTable: React.FC<DataTableProps> = ({
                   setIsOverdueFilterActive(false);
                   setCurrentPage(1);
                 }}
-                className={`px-2.5 py-1.5 rounded-md transition-colors ${
+                className={`px-2.5 py-1.5 rounded-md transition-colors cursor-pointer ${
                   (statusFilter === 'Received by Area' || statusFilter === 'Not yet shipped')
                     ? 'bg-blue-600 text-white font-semibold'
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                Received by Area
+                Received Area
               </button>
               <button
                 onClick={() => {
@@ -355,10 +355,10 @@ export const DataTable: React.FC<DataTableProps> = ({
                   setIsOverdueFilterActive(false);
                   setCurrentPage(1);
                 }}
-                className={`px-2.5 py-1.5 rounded-md transition-colors ${
+                className={`px-2.5 py-1.5 rounded-md transition-colors cursor-pointer ${
                   (statusFilter === 'Sent to HMMI' || statusFilter === 'Delivered')
                     ? 'bg-emerald-600 text-white font-semibold'
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Sent to HMMI
@@ -374,14 +374,14 @@ export const DataTable: React.FC<DataTableProps> = ({
                   onPrintTags(filteredRecords.slice(0, 30));
                 }
               }}
-              className={`px-3 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+              className={`px-3 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                 selectedRecordsList.length > 0
                   ? 'bg-red-600 hover:bg-red-700 text-white shadow-xs active:scale-95'
-                  : 'bg-white border border-slate-300 hover:border-slate-400 text-slate-700 hover:bg-slate-50'
+                  : 'bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50'
               }`}
               title="Cetak Tag Part (Original Failure Part Tag) untuk tim Quality / HMMI"
             >
-              <Tag className={`w-3.5 h-3.5 ${selectedRecordsList.length > 0 ? 'text-white' : 'text-red-600'}`} />
+              <Tag className={`w-3.5 h-3.5 ${selectedRecordsList.length > 0 ? 'text-white' : 'text-red-600 dark:text-red-400'}`} />
               <span>
                 {selectedRecordsList.length > 0
                   ? `Cetak Tag (${selectedRecordsList.length})`
@@ -400,7 +400,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                   clearSelection();
                   setCurrentPage(1);
                 }}
-                className="px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="px-2.5 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
               >
                 Reset
               </button>
@@ -411,7 +411,7 @@ export const DataTable: React.FC<DataTableProps> = ({
 
         {/* Floating Action Banner: Terpilih untuk Dicetak Tag */}
         {selectedRecordsList.length > 0 && (
-          <div className="p-3 bg-slate-900 text-white rounded-xl shadow-lg border border-slate-800 flex flex-wrap items-center justify-between gap-3 animate-fade-in no-print">
+          <div className="p-3 bg-slate-900 text-white rounded-xl shadow-lg border border-slate-800 flex flex-wrap items-center justify-between gap-3 animate-fade-in no-print w-full">
             <div className="flex items-center gap-2.5">
               <span className="w-7 h-7 rounded-lg bg-red-600 flex items-center justify-center font-bold text-xs text-white shadow-xs">
                 {selectedRecordsList.length}
@@ -426,22 +426,22 @@ export const DataTable: React.FC<DataTableProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={selectAllFiltered}
-                className="px-2.5 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                className="px-2.5 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
               >
                 Pilih Semua ({filteredRecords.length})
               </button>
               <button
                 onClick={clearSelection}
-                className="px-2.5 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                className="px-2.5 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
               >
                 Batal
               </button>
               <button
                 onClick={handlePrintSelected}
-                className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
+                className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
               >
                 <Printer className="w-3.5 h-3.5" />
                 <span>Cetak Tag Terpilih ({selectedRecordsList.length})</span>
@@ -451,32 +451,32 @@ export const DataTable: React.FC<DataTableProps> = ({
         )}
 
         {/* Count Summary */}
-        <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1 gap-1">
           <div>
-            Menampilkan <strong className="text-slate-900 font-mono tabular-nums">{filteredRecords.length}</strong> part OFP
-            {isOverdueFilterActive && <span className="text-red-600 font-bold"> (Khusus Overdue &gt; 30 Hari)</span>}
+            Menampilkan <strong className="text-slate-900 dark:text-white font-mono tabular-nums">{filteredRecords.length}</strong> part OFP
+            {isOverdueFilterActive && <span className="text-red-600 dark:text-red-400 font-bold"> (Khusus Overdue &gt; 30 Hari)</span>}
             {searchTerm && <span> untuk kata kunci &ldquo;{searchTerm}&rdquo;</span>}
             {selectedRecordsList.length > 0 && (
-              <span className="text-red-600 font-bold ml-1">· ({selectedRecordsList.length} terpilih)</span>
+              <span className="text-red-600 dark:text-red-400 font-bold ml-1">· ({selectedRecordsList.length} terpilih)</span>
             )}
           </div>
-          <div className="text-[11px] text-slate-400 hidden sm:block">
+          <div className="text-[11px] text-slate-400 dark:text-slate-500 hidden sm:block">
             Centang checkbox untuk mencetak Original Failure Part Tag
           </div>
         </div>
       </div>
 
-      {/* Table Data */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs">
+      {/* Table Data - wrapped with dedicated horizontal scroll */}
+      <div className="w-full overflow-x-auto">
+        <table className="w-full min-w-[1280px] text-left border-collapse text-xs">
           <thead>
-            <tr className="bg-slate-100/90 border-b border-slate-200 text-slate-700 font-semibold uppercase tracking-wider text-[11px]">
+            <tr className="bg-slate-100/90 dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold uppercase tracking-wider text-[11px]">
               <th className="py-3 px-3 text-center w-10">
                 <input
                   type="checkbox"
                   checked={isAllPageSelected}
                   onChange={toggleSelectPage}
-                  className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                  className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-red-600 focus:ring-red-500 cursor-pointer"
                   title="Pilih semua baris di halaman ini"
                 />
               </th>
@@ -499,12 +499,12 @@ export const DataTable: React.FC<DataTableProps> = ({
               <th className="py-3 px-4 whitespace-nowrap text-right">Tindakan Alur</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="animate-pulse">
                   <td colSpan={18} className="py-4 px-4">
-                    <div className="h-4 bg-slate-200 rounded w-full"></div>
+                    <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-full"></div>
                   </td>
                 </tr>
               ))
@@ -513,11 +513,11 @@ export const DataTable: React.FC<DataTableProps> = ({
                 <tr
                   key={`${item.id || item.dtr_number}-${item.part_name}-${item.part_number || ''}`}
                   onClick={() => onSelectRecord(item)}
-                  className={`hover:bg-slate-50/80 cursor-pointer transition-colors ${
+                  className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/60 cursor-pointer transition-colors ${
                     selectedRecordKeys.has(getRecordKey(item))
-                      ? 'bg-red-50/50'
+                      ? 'bg-red-50/50 dark:bg-red-950/40'
                       : item.is_overdue
-                      ? 'bg-red-50/30'
+                      ? 'bg-red-50/30 dark:bg-red-950/20'
                       : ''
                   }`}
                 >
@@ -527,90 +527,90 @@ export const DataTable: React.FC<DataTableProps> = ({
                       type="checkbox"
                       checked={selectedRecordKeys.has(getRecordKey(item))}
                       onChange={() => toggleSelectRow(item)}
-                      className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-red-600 focus:ring-red-500 cursor-pointer"
                     />
                   </td>
 
                   {/* TR_No */}
-                  <td className="py-3 px-4 whitespace-nowrap font-mono font-bold text-red-600">
+                  <td className="py-3 px-4 whitespace-nowrap font-mono font-bold text-red-600 dark:text-red-400">
                     {item.dtr_number}
                   </td>
 
                   {/* Part & Part Number */}
                   <td className="py-3 px-4 whitespace-nowrap max-w-[220px]">
-                    <div className="font-bold text-slate-900 truncate" title={item.part_name}>
+                    <div className="font-bold text-slate-900 dark:text-white truncate" title={item.part_name}>
                       {item.part_name}
                     </div>
                     {item.part_number ? (
-                      <div className="text-[11px] font-mono font-semibold text-emerald-700 truncate" title={`Part Number: ${item.part_number}`}>
+                      <div className="text-[11px] font-mono font-semibold text-emerald-700 dark:text-emerald-400 truncate" title={`Part Number: ${item.part_number}`}>
                         PN: {item.part_number}
                       </div>
                     ) : (
-                      <div className="text-[10px] text-slate-400 font-mono">-</div>
+                      <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">-</div>
                     )}
                   </td>
 
                   {/* Qty */}
-                  <td className="py-3 px-2 text-center font-mono font-bold text-slate-800">
+                  <td className="py-3 px-2 text-center font-mono font-bold text-slate-800 dark:text-slate-200">
                     {item.quantity}
                   </td>
 
                   {/* Model_Unit */}
-                  <td className="py-3 px-4 text-slate-700 whitespace-nowrap max-w-[180px] truncate" title={item.model}>
+                  <td className="py-3 px-4 text-slate-700 dark:text-slate-300 whitespace-nowrap max-w-[180px] truncate" title={item.model}>
                     {item.model}
                   </td>
 
                   {/* Chassis */}
-                  <td className="py-3 px-4 font-mono text-slate-600 whitespace-nowrap">
+                  <td className="py-3 px-4 font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">
                     {item.chassis_number}
                   </td>
 
                   {/* Engine_No */}
-                  <td className="py-3 px-4 font-mono text-slate-600 whitespace-nowrap">
+                  <td className="py-3 px-4 font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">
                     {item.engine_number}
                   </td>
 
                   {/* Mileage */}
-                  <td className="py-3 px-3 text-right font-mono tabular-nums text-slate-700 whitespace-nowrap">
+                  <td className="py-3 px-3 text-right font-mono tabular-nums text-slate-700 dark:text-slate-300 whitespace-nowrap">
                     {item.mileage ? `${item.mileage.toLocaleString('id-ID')} km` : '-'}
                   </td>
 
                   {/* DLR */}
-                  <td className="py-3 px-4 text-slate-700 whitespace-nowrap max-w-[180px] truncate" title={item.dealer_name}>
+                  <td className="py-3 px-4 text-slate-700 dark:text-slate-300 whitespace-nowrap max-w-[180px] truncate" title={item.dealer_name}>
                     {item.dealer_name}
                   </td>
 
                   {/* QPI Number */}
-                  <td className="py-3 px-3 font-mono font-medium text-slate-700 whitespace-nowrap">
+                  <td className="py-3 px-3 font-mono font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
                     {item.qpi_number || '-'}
                   </td>
 
                   {/* PROBLEM */}
                   <td className="py-3 px-4 whitespace-nowrap max-w-[220px]" title={item.problem || '-'}>
-                    <div className="font-normal text-slate-800 truncate">
+                    <div className="font-normal text-slate-800 dark:text-slate-200 truncate">
                       {item.problem ? item.problem : '-'}
                     </div>
                   </td>
 
                   {/* Judgment & Judgement Date */}
                   <td className="py-3 px-3 whitespace-nowrap max-w-[160px]">
-                    <div className="font-medium text-slate-900 truncate" title={item.judgement_qpi}>
+                    <div className="font-medium text-slate-900 dark:text-white truncate" title={item.judgement_qpi}>
                       {item.judgement_qpi || 'In Review'}
                     </div>
                     {item.judgement_date && (
-                      <div className="text-[10px] font-mono text-slate-500">
+                      <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
                         Tgl: {item.judgement_date}
                       </div>
                     )}
                   </td>
 
                   {/* OCCURRED DATE */}
-                  <td className="py-3 px-3 text-center whitespace-nowrap font-mono text-slate-700">
+                  <td className="py-3 px-3 text-center whitespace-nowrap font-mono text-slate-700 dark:text-slate-300">
                     {item.occurred_date ? item.occurred_date : '-'}
                   </td>
 
                   {/* REPAIR DATE */}
-                  <td className="py-3 px-3 text-center whitespace-nowrap font-mono text-slate-700">
+                  <td className="py-3 px-3 text-center whitespace-nowrap font-mono text-slate-700 dark:text-slate-300">
                     {item.repair_date ? item.repair_date : '-'}
                   </td>
 
@@ -633,13 +633,13 @@ export const DataTable: React.FC<DataTableProps> = ({
                     <div className="flex items-center justify-center gap-1.5">
                       <span
                         title={item.area_photo ? `Foto Tim Area: Diterima oleh ${item.area_received_by}` : 'Belum ada foto Tim Area'}
-                        className={`p-1 rounded ${item.area_photo ? 'bg-amber-100 text-amber-800' : 'text-slate-300'}`}
+                        className={`p-1 rounded ${item.area_photo ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300' : 'text-slate-300 dark:text-slate-600'}`}
                       >
                         <Camera className="w-3.5 h-3.5" />
                       </span>
                       <span
                         title={item.quality_photo ? `Foto Tim Quality: Dicek oleh ${item.quality_checked_by}` : 'Belum ada foto Tim Quality'}
-                        className={`p-1 rounded ${item.quality_photo ? 'bg-blue-100 text-blue-800' : 'text-slate-300'}`}
+                        className={`p-1 rounded ${item.quality_photo ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300' : 'text-slate-300 dark:text-slate-600'}`}
                       >
                         <ShieldCheck className="w-3.5 h-3.5" />
                       </span>
@@ -656,7 +656,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                             ? 'bg-amber-600 hover:bg-amber-700 text-white'
                             : item.tracking_status === 'Not yet shipped'
                             ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                            : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
                         }`}
                         title="Perbarui Status, Upload Foto, atau Verifikasi"
                       >
@@ -671,7 +671,7 @@ export const DataTable: React.FC<DataTableProps> = ({
 
                       <button
                         onClick={() => onSelectRecord(item)}
-                        className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded"
+                        className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors"
                         title="Lihat Detail Lengkap"
                       >
                         <Eye className="w-3.5 h-3.5" />
@@ -679,7 +679,7 @@ export const DataTable: React.FC<DataTableProps> = ({
 
                       <button
                         onClick={() => handlePrintSingle(item)}
-                        className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        className="p-1 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded transition-colors"
                         title="Cetak Tag Part (Original Failure Part Tag) ini"
                       >
                         <Tag className="w-3.5 h-3.5" />
@@ -692,7 +692,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                               onDeleteRecord(item.id!);
                             }
                           }}
-                          className="p-1 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded"
+                          className="p-1 text-slate-300 dark:text-slate-600 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded transition-colors"
                           title="Hapus Baris"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -704,9 +704,9 @@ export const DataTable: React.FC<DataTableProps> = ({
               ))
             ) : (
               <tr>
-                <td colSpan={18} className="py-12 text-center text-slate-500">
-                  <p className="font-semibold text-slate-700">Tidak ada data klaim OFP yang cocok dengan filter.</p>
-                  <p className="text-xs text-slate-400 mt-1">Coba ubah kata kunci atau upload file Excel monitoring baru.</p>
+                <td colSpan={18} className="py-12 text-center text-slate-500 dark:text-slate-400">
+                  <p className="font-semibold text-slate-700 dark:text-slate-200">Tidak ada data klaim OFP yang cocok dengan filter.</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Coba ubah kata kunci atau upload file Excel monitoring baru.</p>
                 </td>
               </tr>
             )}
@@ -715,7 +715,7 @@ export const DataTable: React.FC<DataTableProps> = ({
       </div>
 
       {/* Pagination Footer */}
-      <div className="p-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+      <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400">
         <div className="flex items-center gap-2">
           <span>Baris per halaman:</span>
           <select
@@ -724,7 +724,7 @@ export const DataTable: React.FC<DataTableProps> = ({
               setItemsPerPage(Number(e.target.value));
               setCurrentPage(1);
             }}
-            className="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono"
+            className="px-2 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded text-xs font-mono text-slate-800 dark:text-slate-200"
           >
             <option value={10}>10</option>
             <option value={25}>25</option>
@@ -732,7 +732,7 @@ export const DataTable: React.FC<DataTableProps> = ({
           </select>
           <span className="text-slate-400">·</span>
           <span>
-            Halaman <strong className="font-mono">{currentPage}</strong> dari <strong className="font-mono">{totalPages}</strong>
+            Halaman <strong className="font-mono text-slate-900 dark:text-white">{currentPage}</strong> dari <strong className="font-mono text-slate-900 dark:text-white">{totalPages}</strong>
           </span>
         </div>
 
@@ -740,18 +740,18 @@ export const DataTable: React.FC<DataTableProps> = ({
           <button
             onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
             disabled={currentPage === 1}
-            className={`p-1.5 rounded border border-slate-300 bg-white ${
-              currentPage === 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-100 text-slate-700'
+            className={`p-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 ${
+              currentPage === 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
             }`}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="px-3 font-mono">{currentPage} / {totalPages}</span>
+          <span className="px-3 font-mono text-slate-800 dark:text-slate-200">{currentPage} / {totalPages}</span>
           <button
             onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
             disabled={currentPage === totalPages}
-            className={`p-1.5 rounded border border-slate-300 bg-white ${
-              currentPage === totalPages ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-100 text-slate-700'
+            className={`p-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 ${
+              currentPage === totalPages ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
             }`}
           >
             <ChevronRight className="w-4 h-4" />

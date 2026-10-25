@@ -5,71 +5,66 @@ import {
   Plus,
   BookOpen,
   HelpCircle,
-  FileDown
+  FileDown,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 interface HeaderProps {
   onOpenUploadExcel: () => void;
   onOpenManualEntry: () => void;
-  onOpenGuide: () => void;
   activeStatusFilter: string;
   setActiveStatusFilter: (status: string) => void;
   isSupabaseActive?: boolean;
+  isDarkMode?: boolean;
+  onToggleTheme?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenUploadExcel,
   onOpenManualEntry,
-  onOpenGuide,
   activeStatusFilter,
   setActiveStatusFilter,
   isSupabaseActive = false,
+  isDarkMode = false,
+  onToggleTheme,
 }) => {
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-40 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
+      <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
         
         {/* Zone 1: Brand Wordmark */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="w-9 h-9 rounded-lg bg-red-600 flex items-center justify-center text-white font-black text-lg shadow-sm">
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 min-w-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-red-600 flex items-center justify-center text-white font-black text-base sm:text-lg shadow-xs shrink-0">
             H
           </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-base font-extrabold tracking-tight text-slate-900 whitespace-nowrap">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-sm sm:text-base font-extrabold tracking-tight text-slate-900 dark:text-white truncate">
                 HINO OFP TRACKER
               </span>
-              <span className="text-[10px] font-bold text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded uppercase">
-                HMSI Quality Hub
+              <span className="text-[10px] font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 px-1.5 py-0.5 rounded uppercase hidden xs:inline shrink-0">
+                HMSI Quality
               </span>
-              <button
-                type="button"
-                onClick={onOpenGuide}
-                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex items-center gap-1 cursor-pointer transition-colors ${
-                  isSupabaseActive 
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
-                    : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100'
-                }`}
-                title="Klik untuk melihat panduan setup Supabase & koneksi"
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${isSupabaseActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
-                <span>{isSupabaseActive ? 'Supabase Live' : 'Supabase Config'}</span>
-              </button>
+              <div className="flex items-center gap-1 text-[10px] font-medium text-slate-500 dark:text-slate-400 font-mono shrink-0 ml-1">
+                <span className={`w-1.5 h-1.5 rounded-full ${isSupabaseActive ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+                <span className="hidden sm:inline">{isSupabaseActive ? 'Supabase Live' : 'Local Storage'}</span>
+              </div>
             </div>
-            <p className="text-[11px] text-slate-500 hidden sm:block">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden md:block truncate">
               Monitoring Leadtime Part: Dealer &rarr; HMSI &rarr; HMMI / HML (Target &le; 30 Hari)
             </p>
           </div>
         </div>
 
-        {/* Zone 2: Navigation / Quick Status Filters */}
-        <nav className="hidden lg:flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs font-semibold">
+        {/* Zone 2: Navigation / Quick Status Filters (Desktop) */}
+        <nav className="hidden xl:flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-lg text-xs font-semibold shrink-0">
           <button
             onClick={() => setActiveStatusFilter('all')}
             className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap ${
               activeStatusFilter === 'all'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Semua Part
@@ -78,8 +73,8 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => setActiveStatusFilter('Waiting OFP')}
             className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap ${
               activeStatusFilter === 'Waiting OFP'
-                ? 'bg-white text-amber-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-amber-700 dark:text-amber-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Waiting OFP (Dealer)
@@ -88,8 +83,8 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => setActiveStatusFilter('Not yet shipped')}
             className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap ${
               activeStatusFilter === 'Not yet shipped'
-                ? 'bg-white text-blue-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Not yet shipped (HMSI)
@@ -98,8 +93,8 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => setActiveStatusFilter('Delivered')}
             className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap ${
               activeStatusFilter === 'Delivered'
-                ? 'bg-white text-emerald-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Delivered (Supplier)
@@ -107,52 +102,58 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
 
         {/* Zone 3: Primary Action Controls */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           
+          {/* Dark Mode Toggle */}
+          {onToggleTheme && (
+            <button
+              onClick={onToggleTheme}
+              className="p-2 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
+              title={isDarkMode ? 'Beralih ke Mode Terang (Light Mode)' : 'Beralih ke Mode Malam (Dark Mode)'}
+              aria-label="Toggle Dark Mode"
+            >
+              {isDarkMode ? (
+                <Sun className="w-4 h-4 text-amber-400" />
+              ) : (
+                <Moon className="w-4 h-4 text-slate-700" />
+              )}
+            </button>
+          )}
+
           {/* Download Template Excel */}
           <a
             href="/api/download-template"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap"
+            className="hidden lg:flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors whitespace-nowrap"
             title="Download Template Excel Resmi HMSI"
           >
-            <FileDown className="w-3.5 h-3.5 text-slate-500" />
-            <span className="hidden xl:inline">Template Excel</span>
+            <FileDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+            <span>Template Excel</span>
           </a>
-
-          {/* Guide Modal Trigger */}
-          <button
-            onClick={onOpenGuide}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap"
-            title="Panduan Deploy & Cara Pakai"
-          >
-            <BookOpen className="w-3.5 h-3.5 text-slate-500" />
-            <span className="hidden md:inline">Panduan</span>
-          </button>
 
           {/* Manual Input DTR */}
           <button
             onClick={onOpenManualEntry}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors whitespace-nowrap cursor-pointer active:scale-95"
             title="Input Manual 1 DTR"
           >
-            <Plus className="w-3.5 h-3.5 text-slate-700" />
+            <Plus className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
             <span className="hidden sm:inline">Input DTR</span>
           </button>
 
           {/* Export CSV */}
           <a
             href="/api/export/csv"
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors whitespace-nowrap"
             title="Download seluruh data dalam format CSV untuk Excel"
           >
-            <Download className="w-3.5 h-3.5 text-slate-500" />
-            <span className="hidden xl:inline">Export CSV</span>
+            <Download className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+            <span className="hidden md:inline">Export CSV</span>
           </a>
 
           {/* Upload Excel Button (Primary Action) */}
           <button
             onClick={onOpenUploadExcel}
-            className="flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 rounded-lg transition-all shadow-xs whitespace-nowrap"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 rounded-lg transition-all shadow-xs whitespace-nowrap cursor-pointer"
           >
             <FileSpreadsheet className="w-4 h-4" />
             <span>Upload Excel</span>
@@ -162,22 +163,22 @@ export const Header: React.FC<HeaderProps> = ({
 
       </div>
 
-      {/* Sub-bar for mobile filters */}
-      <div className="lg:hidden border-t border-slate-200 bg-slate-50 px-4 py-2 flex items-center justify-between overflow-x-auto gap-2">
-        <span className="text-xs text-slate-500 shrink-0">Filter Status:</span>
-        <div className="flex items-center gap-1 shrink-0">
+      {/* Sub-bar for mobile/tablet status filter tabs */}
+      <div className="xl:hidden border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/90 px-3 sm:px-6 py-2 overflow-x-auto w-full">
+        <div className="flex items-center gap-1.5 min-w-max">
+          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mr-1 shrink-0">Status:</span>
           {(['all', 'Waiting OFP', 'Not yet shipped', 'Delivered'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveStatusFilter(tab)}
-              className={`px-2.5 py-1 text-xs font-medium rounded ${
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer whitespace-nowrap ${
                 activeStatusFilter === tab
-                  ? 'bg-slate-900 text-white font-semibold'
-                  : 'bg-white text-slate-600 border border-slate-200'
+                  ? 'bg-slate-900 dark:bg-slate-700 text-white font-semibold shadow-xs'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750'
               }`}
             >
               {tab === 'all'
-                ? 'Semua'
+                ? 'Semua Part'
                 : tab === 'Waiting OFP'
                 ? 'Waiting OFP'
                 : tab === 'Not yet shipped'

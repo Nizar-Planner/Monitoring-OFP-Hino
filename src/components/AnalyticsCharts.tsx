@@ -27,15 +27,21 @@ interface AnalyticsChartsProps {
   stats: StatsData | null;
   onFilterByPart: (partName: string) => void;
   onFilterByStatus: (status: string) => void;
+  isDarkMode?: boolean;
 }
 
 export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
   stats,
   onFilterByPart,
   onFilterByStatus,
+  isDarkMode = false,
 }) => {
   const topOverdueParts = stats?.topOverdueParts || [];
   const statusCounts = stats?.statusCounts;
+
+  const tickColor = isDarkMode ? '#94a3b8' : '#64748b';
+  const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
+  const textColor = isDarkMode ? '#e2e8f0' : '#334155';
 
   // Bar Chart for Top 5 Part Name OFP yang Over > 30 Hari
   const barChartData = {
@@ -78,6 +84,7 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
       x: {
         grid: { display: false },
         ticks: {
+          color: tickColor,
           font: { size: 11 },
           maxRotation: 20,
           callback: function (_val: any, index: number) {
@@ -89,11 +96,12 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
       y: {
         beginAtZero: true,
         ticks: {
+          color: tickColor,
           stepSize: 1,
           font: { size: 11 },
         },
         grid: {
-          color: 'rgba(0, 0, 0, 0.05)',
+          color: gridColor,
         },
       },
     },
@@ -124,7 +132,7 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
           '#10B981', // Emerald (Delivered)
         ],
         borderWidth: 2,
-        borderColor: '#FFFFFF',
+        borderColor: isDarkMode ? '#0f172a' : '#FFFFFF',
       },
     ],
   };
@@ -136,6 +144,7 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
       legend: {
         position: 'bottom' as const,
         labels: {
+          color: textColor,
           boxWidth: 12,
           padding: 12,
           font: { size: 11 },
@@ -154,29 +163,29 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 w-full">
       
       {/* Top 5 Part Name Overdue > 30 Days (Primary User KPI) */}
-      <div className="lg:col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
+      <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between transition-colors min-w-0 w-full">
         <div>
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-red-100 text-red-700 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 flex items-center justify-center">
                 <AlertTriangle className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <span>Top 5 Part Name OFP Over &gt; 30 Hari</span>
                   <span className="text-[10px] bg-red-600 text-white font-bold px-1.5 py-0.5 rounded uppercase">
                     Critical Risk
                   </span>
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Part yang terancam di-reject oleh Supplier (HMMI/HML) dengan alasan &ldquo;OFP Not Return&rdquo;
                 </p>
               </div>
             </div>
-            <span className="text-xs text-slate-400 font-mono hidden sm:inline">
+            <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden sm:inline">
               Klik bar untuk filter
             </span>
           </div>
@@ -185,10 +194,10 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
             {topOverdueParts.length > 0 ? (
               <Bar data={barChartData} options={barChartOptions} />
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 dark:text-slate-500">
                 <ShieldAlert className="w-10 h-10 text-emerald-500 mb-2" />
-                <p className="font-semibold text-slate-700 text-xs">Semua Part Masih dalam Batas Aman (&le; 30 Hari)</p>
-                <p className="text-[11px] text-slate-400 mt-1 max-w-sm">
+                <p className="font-semibold text-slate-700 dark:text-slate-200 text-xs">Semua Part Masih dalam Batas Aman (&le; 30 Hari)</p>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 max-w-sm">
                   Hebat! Tidak ada klaim OFP yang melewati 30 hari. Seluruh aliran klaim ke supplier berjalan tepat waktu.
                 </p>
               </div>
@@ -198,16 +207,16 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
 
         {/* Priority Quick Filter Badges */}
         {topOverdueParts.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2 text-xs text-slate-600">
-            <span className="font-semibold text-slate-800">Prioritas Segera Follow-up:</span>
+          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+            <span className="font-semibold text-slate-800 dark:text-slate-200">Prioritas Segera Follow-up:</span>
             {topOverdueParts.map((item, idx) => (
               <button
                 key={idx}
                 onClick={() => onFilterByPart(item.name)}
-                className="text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded text-[11px] font-semibold flex items-center gap-1 transition-colors"
+                className="text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-200 bg-red-50 dark:bg-red-950/60 hover:bg-red-100 dark:hover:bg-red-900/60 px-2 py-0.5 rounded text-[11px] font-semibold flex items-center gap-1 transition-colors border border-red-200/60 dark:border-red-800/60"
               >
                 <span>#{idx + 1} {item.name}</span>
-                <span className="font-mono text-red-800 font-bold">({item.maxDays} hr)</span>
+                <span className="font-mono text-red-800 dark:text-red-200 font-bold">({item.maxDays} hr)</span>
               </button>
             ))}
           </div>
@@ -215,16 +224,16 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
       </div>
 
       {/* Tracking Status Breakdown Doughnut Chart */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
+      <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between transition-colors">
         <div>
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                 <PieChart className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Distribusi Status Tracking</h3>
-                <p className="text-xs text-slate-500">Posisi fisik part saat ini</p>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Distribusi Status Tracking</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Posisi fisik part saat ini</p>
               </div>
             </div>
           </div>
@@ -234,9 +243,9 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
           </div>
         </div>
 
-        <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
           <span>Target Pengiriman: &le; 30 Hari</span>
-          <span className="font-mono font-bold text-slate-800">
+          <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
             {stats?.totalRecords || 0} Total Part
           </span>
         </div>

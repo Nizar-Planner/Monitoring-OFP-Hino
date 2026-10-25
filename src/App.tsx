@@ -7,16 +7,36 @@ import { DetailModal } from './components/DetailModal';
 import { ManualEntryModal } from './components/ManualEntryModal';
 import { ActionVerificationModal } from './components/ActionVerificationModal';
 import { ExcelUploadModal } from './components/ExcelUploadModal';
-import { DeployGuideModal } from './components/DeployGuideModal';
 import { PrintTagView } from './components/PrintTagView';
 import { OpfRecord, StatsData, ExcelImportResult } from './types';
-import { Truck, AlertTriangle, CheckCircle2, FileSpreadsheet, ShieldAlert, ArrowUpRight, Clock, ShieldCheck, Building } from 'lucide-react';
+import { Truck, AlertTriangle, CheckCircle2, FileSpreadsheet, ShieldAlert, Clock, ShieldCheck, Building } from 'lucide-react';
 
 export default function App() {
   const [records, setRecords] = useState<OpfRecord[]>([]);
   const [stats, setStats] = useState<StatsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSupabaseActive, setIsSupabaseActive] = useState(false);
+  const [isSchemaSynced, setIsSchemaSynced] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hino_theme');
+      if (saved) return saved === 'dark';
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('hino_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('hino_theme', 'light');
+    }
+  }, [isDarkMode]);
+
+  const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
 
   // Filters & State
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,7 +48,6 @@ export default function App() {
   const [actionRecord, setActionRecord] = useState<OpfRecord | null>(null);
   const [isUploadExcelOpen, setIsUploadExcelOpen] = useState(false);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
-  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   const [isPrintTagOpen, setIsPrintTagOpen] = useState(false);
   const [tagsToPrint, setTagsToPrint] = useState<OpfRecord[]>([]);
 
@@ -54,7 +73,10 @@ export default function App() {
 
       if (recRes.success) setRecords(recRes.data);
       if (statsRes.success) setStats(statsRes.data);
-      if (sbRes.success) setIsSupabaseActive(Boolean(sbRes.active));
+      if (sbRes.success) {
+        setIsSupabaseActive(Boolean(sbRes.active));
+        setIsSchemaSynced(sbRes.isSchemaSynced !== false);
+      }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
     } finally {
@@ -125,23 +147,23 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100/70 text-slate-900 font-sans antialiased">
+    <div className="min-h-screen w-full overflow-x-hidden bg-slate-100/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased transition-colors duration-200">
       
       {/* Toast Notification */}
       {toastMessage && (
-        <div className={`fixed bottom-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs sm:text-sm font-semibold transition-all transform animate-bounce bg-white ${
+        <div className={`fixed bottom-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl border text-xs sm:text-sm font-semibold transition-all transform animate-bounce bg-white dark:bg-slate-900 ${
           toastMessage.type === 'error'
-            ? 'border-red-300 text-red-800'
+            ? 'border-red-300 dark:border-red-800 text-red-800 dark:text-red-300'
             : toastMessage.type === 'warning'
-            ? 'border-amber-300 text-amber-800'
-            : 'border-emerald-300 text-emerald-800'
+            ? 'border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300'
+            : 'border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
         }`}>
           {toastMessage.type === 'error' ? (
-            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+            <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
           ) : toastMessage.type === 'warning' ? (
-            <Clock className="w-5 h-5 text-amber-600 shrink-0" />
+            <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
           ) : (
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
           )}
           <span>{toastMessage.text}</span>
         </div>
@@ -151,9 +173,10 @@ export default function App() {
       <Header
         onOpenUploadExcel={() => setIsUploadExcelOpen(true)}
         onOpenManualEntry={() => setIsManualModalOpen(true)}
-        onOpenGuide={() => setIsGuideModalOpen(true)}
         activeStatusFilter={statusFilter}
         isSupabaseActive={isSupabaseActive}
+        isDarkMode={isDarkMode}
+        onToggleTheme={toggleDarkMode}
         setActiveStatusFilter={(st) => {
           setStatusFilter(st);
           setIsOverdueFilterActive(false);
@@ -161,10 +184,10 @@ export default function App() {
       />
 
       {/* Page Content Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <main className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-6 space-y-6">
         
         {/* Context Hero Banner */}
-        <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 shadow-xs">
+        <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-900 shadow-xs">
           <div className="absolute inset-0">
             <img
               src="/src/assets/images/hino_truck_fleet_1792158559046.jpg"
@@ -175,15 +198,15 @@ export default function App() {
             <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/90 to-transparent"></div>
           </div>
 
-          <div className="relative p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="relative p-5 sm:p-6 lg:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6">
             <div className="max-w-3xl space-y-2">
               <div className="flex items-center gap-2 text-xs font-semibold text-red-400">
-                <Truck className="w-4 h-4" />
+                <Truck className="w-4 h-4 shrink-0" />
                 <span>PT HINO MOTORS SALES INDONESIA (HMSI)</span>
                 <span>·</span>
                 <span className="text-slate-300">HMSI-FIELD QUALITY</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white leading-tight">
                 Sistem Monitoring &amp; Tracking Part OFP (Dealer &rarr; HMSI &rarr; HMMI/HML)
               </h1>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
@@ -191,21 +214,13 @@ export default function App() {
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+            <div className="flex items-center gap-3 shrink-0">
               <button
                 onClick={() => setIsUploadExcelOpen(true)}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
               >
                 <FileSpreadsheet className="w-4 h-4" />
                 <span>Upload Excel Monitoring</span>
-              </button>
-
-              <button
-                onClick={() => setIsGuideModalOpen(true)}
-                className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold transition-colors border border-white/20"
-              >
-                <span>Panduan Alur</span>
-                <ArrowUpRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -226,6 +241,7 @@ export default function App() {
         {/* 2. Analytics Charts (Top 5 Part Name Over > 30 Hari + Status Distribution) */}
         <AnalyticsCharts
           stats={stats}
+          isDarkMode={isDarkMode}
           onFilterByPart={(partName) => setSearchTerm(partName)}
           onFilterByStatus={(st) => {
             setStatusFilter(st);
@@ -237,10 +253,10 @@ export default function App() {
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-              <h3 className="text-base font-bold text-slate-900">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
                 Master Data Monitoring Klaim Part OFP
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Diambil dari file Excel monitoring OneDrive kantor atau input teknisi lapangan
               </p>
             </div>
@@ -248,15 +264,15 @@ export default function App() {
             <div className="flex items-center gap-2">
               <a
                 href="/api/download-template"
-                className="text-xs text-slate-600 hover:text-slate-900 hover:underline flex items-center gap-1 font-medium"
+                className="text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:underline flex items-center gap-1 font-medium transition-colors"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>Unduh Template Excel</span>
               </a>
-              <span className="text-slate-300">·</span>
+              <span className="text-slate-300 dark:text-slate-700">·</span>
               <a
                 href="/api/export/csv"
-                className="text-xs text-slate-600 hover:text-slate-900 hover:underline font-medium"
+                className="text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:underline font-medium transition-colors"
               >
                 Export CSV
               </a>
@@ -282,19 +298,19 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="mt-12 border-t border-slate-200 bg-white py-6 text-xs text-slate-500">
+      <footer className="mt-12 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-6 text-xs text-slate-500 dark:text-slate-400 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="w-5 h-5 rounded bg-red-600 text-white font-black text-xs flex items-center justify-center">
               H
             </span>
-            <span className="font-semibold text-slate-800">
+            <span className="font-semibold text-slate-800 dark:text-slate-200">
               Hino Motors Sales Indonesia (HMSI) · OFP SLA Monitoring System
             </span>
             <span>·</span>
-            <span>SQLite Database</span>
+            <span>Database Terhubung</span>
           </div>
-          <div className="flex items-center gap-4 text-[11px] text-slate-400">
+          <div className="flex items-center gap-4 text-[11px] text-slate-400 dark:text-slate-500">
             <span>Target SLA: &le; 30 Hari</span>
             <span>·</span>
             <span>Bukti Foto Digital Tim Area &amp; Quality</span>
@@ -337,13 +353,7 @@ export default function App() {
         onSubmit={handleCreateOrUpdate}
       />
 
-      {/* MODAL 5: Deployment & Operational Guide */}
-      <DeployGuideModal
-        isOpen={isGuideModalOpen}
-        onClose={() => setIsGuideModalOpen(false)}
-      />
-
-      {/* MODAL 6: Original Failure Part Tag Print Preview & Sheet */}
+      {/* MODAL 5: Original Failure Part Tag Print Preview & Sheet */}
       <PrintTagView
         isOpen={isPrintTagOpen}
         onClose={() => setIsPrintTagOpen(false)}

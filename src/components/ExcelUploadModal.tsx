@@ -193,12 +193,12 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-xl w-full max-h-[90vh] my-auto shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <div className="px-5 sm:px-6 py-4 bg-slate-900 dark:bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center font-bold text-white">
+            <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center font-bold text-white shadow-xs shrink-0">
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
@@ -210,21 +210,21 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+            className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-4 text-xs sm:text-sm">
+        <div className="p-4 sm:p-6 space-y-4 text-xs sm:text-sm overflow-y-auto flex-1">
           {/* Download Template Banner */}
-          <div className="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl">
             <div className="space-y-0.5">
-              <span className="font-bold text-emerald-900 text-xs block">
+              <span className="font-bold text-emerald-900 dark:text-emerald-200 text-xs block">
                 Format Standar Excel Monitoring HMSI
               </span>
-              <p className="text-[11px] text-emerald-700">
+              <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
                 Gunakan template resmi agar nama kolom terbaca sempurna oleh sistem.
               </p>
             </div>
@@ -244,8 +244,8 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
             onClick={() => fileInputRef.current?.click()}
             className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
               selectedFile
-                ? 'border-emerald-500 bg-emerald-50/40'
-                : 'border-slate-300 hover:border-slate-400 bg-slate-50'
+                ? 'border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20'
+                : 'border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 bg-slate-50 dark:bg-slate-800/50'
             }`}
           >
             <input
@@ -255,23 +255,23 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
               accept=".xlsx, .xls"
               className="hidden"
             />
-            <div className="w-12 h-12 mx-auto rounded-full bg-white shadow-xs border border-slate-200 flex items-center justify-center text-slate-600 mb-2">
-              <Upload className="w-6 h-6 text-emerald-600" />
+            <div className="w-12 h-12 mx-auto rounded-full bg-white dark:bg-slate-800 shadow-xs border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 mb-2">
+              <Upload className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
             </div>
 
             {selectedFile ? (
               <div>
-                <p className="font-bold text-slate-900 text-sm">{selectedFile.name}</p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="font-bold text-slate-900 dark:text-white text-sm">{selectedFile.name}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   Ukuran: {(selectedFile.size / 1024).toFixed(1)} KB · Klik untuk ganti file
                 </p>
               </div>
             ) : (
               <div>
-                <p className="font-semibold text-slate-800 text-xs sm:text-sm">
-                  Tarik &amp; lepas file Excel di sini, atau <span className="text-emerald-600 font-bold underline">klik untuk memilih</span>
+                <p className="font-semibold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">
+                  Tarik &amp; lepas file Excel di sini, atau <span className="text-emerald-600 dark:text-emerald-400 font-bold underline">klik untuk memilih</span>
                 </p>
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
                   Mendukung file Microsoft Excel (.xlsx dan .xls)
                 </p>
               </div>
@@ -279,42 +279,49 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
           </div>
 
           {/* Kolom-Kolom yang Dikenali */}
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1">
-            <span className="font-bold text-slate-700 block text-[11px] uppercase tracking-wide">
-              Kolom Excel yang Diekstrak Otomatis:
-            </span>
-            <p className="text-[11px] text-emerald-800 bg-emerald-50/60 p-2 rounded border border-emerald-200 font-mono leading-relaxed">
-              TR_No · Part · Part Number · Model_Unit · Chassis · Engine_No · Mileage · DLR · QPI Number · Judgment · Judgement Date · <strong className="text-emerald-900 bg-emerald-200/60 px-1 rounded">OFP Receive</strong> · <strong className="text-emerald-900 bg-emerald-200/60 px-1 rounded">OFP Send to HMMI</strong>
+          <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px] uppercase tracking-wide">
+                KOLOM EXCEL YANG DIEKSTRAK OTOMATIS:
+              </span>
+              <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.5 rounded">
+                Parser Aktif
+              </span>
+            </div>
+
+            <p className="text-[11px] text-emerald-800 dark:text-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/40 p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-800 font-mono leading-relaxed">
+              TR_No · Part · Part Number · Model_Unit · Chassis · Engine_No · Mileage · DLR · QPI Number · <strong className="text-emerald-900 dark:text-emerald-100 bg-emerald-200/80 dark:bg-emerald-800/80 px-1.5 py-0.5 rounded font-bold">Problem</strong> · Judgment · Judgement Date · <strong className="text-emerald-900 dark:text-emerald-100 bg-emerald-200/80 dark:bg-emerald-800/80 px-1.5 py-0.5 rounded font-bold">Occurred Date</strong> · <strong className="text-emerald-900 dark:text-emerald-100 bg-emerald-200/80 dark:bg-emerald-800/80 px-1.5 py-0.5 rounded font-bold">Repair Date</strong> · <strong className="text-emerald-900 dark:text-emerald-100 bg-emerald-200/80 dark:bg-emerald-800/80 px-1.5 py-0.5 rounded font-bold">OFP Receive</strong> · <strong className="text-emerald-900 dark:text-emerald-100 bg-emerald-200/80 dark:bg-emerald-800/80 px-1.5 py-0.5 rounded font-bold">OFP Send to HMMI</strong>
             </p>
-            <div className="pt-1.5 border-t border-slate-200 text-[11px] text-slate-600 space-y-1">
-              <p>• <strong>Logika Status Otomatis:</strong></p>
-              <ul className="list-disc list-inside pl-1 space-y-0.5 text-slate-500">
-                <li>Jika kolom <strong>OFP Send to HMMI</strong> terisi tanggal &rarr; status otomatis <span className="text-emerald-700 font-semibold">"Sent to HMMI"</span>.</li>
-                <li>Jika kolom <strong>OFP Receive</strong> terisi tanggal &rarr; status otomatis <span className="text-blue-700 font-semibold">"Received by Area"</span>.</li>
-                <li>Jika kedua kolom tanggal tersebut kosong &rarr; status otomatis <span className="text-amber-700 font-semibold">"Belum Terkirim"</span>.</li>
+
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-700 text-[11px] text-slate-600 dark:text-slate-400 space-y-1.5">
+              <p className="font-semibold text-slate-700 dark:text-slate-300">• <strong>Logika Status Otomatis:</strong></p>
+              <ul className="list-disc list-inside pl-1 space-y-1 text-slate-500 dark:text-slate-400">
+                <li>Jika kolom <strong>OFP Send to HMMI</strong> terisi tanggal &rarr; status otomatis <span className="text-emerald-700 dark:text-emerald-400 font-semibold">"Sent to HMMI"</span>.</li>
+                <li>Jika kolom <strong>OFP Receive</strong> terisi tanggal &rarr; status otomatis <span className="text-blue-700 dark:text-blue-400 font-semibold">"Received by Area"</span>.</li>
+                <li>Jika kedua kolom tanggal tersebut kosong &rarr; status otomatis <span className="text-amber-700 dark:text-amber-400 font-semibold">"Belum Terkirim"</span>.</li>
               </ul>
-              <p className="pt-1">• <strong>Anti-Duplikasi Cerdas:</strong> Jika data TR / Part yang sama di-upload ulang, sistem otomatis memperbarui baris data tanpa merusak foto bukti verifikasi yang sudah tersimpan.</p>
+              <p className="pt-1 text-slate-500 dark:text-slate-400">• <strong>Anti-Duplikasi Cerdas:</strong> Jika data TR / Part yang sama di-upload ulang, sistem otomatis memperbarui baris data tanpa merusak foto bukti verifikasi yang sudah tersimpan.</p>
             </div>
           </div>
 
           {/* Processing step indicator */}
           {isUploading && uploadStep && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2.5 text-xs text-blue-700">
-              <RefreshCw className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center gap-2.5 text-xs text-blue-700 dark:text-blue-300">
+              <RefreshCw className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin shrink-0" />
               <span className="font-medium">{uploadStep}</span>
             </div>
           )}
 
           {/* Error Message */}
           {errorMessage && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start justify-between gap-2 text-xs text-red-700">
+            <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg flex items-start justify-between gap-2 text-xs text-red-700 dark:text-red-300">
               <div className="flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
                 <span>{errorMessage}</span>
               </div>
               <button
                 onClick={handleSubmit}
-                className="shrink-0 flex items-center gap-1 font-semibold text-red-800 hover:text-red-900 underline text-[11px]"
+                className="shrink-0 flex items-center gap-1 font-semibold text-red-800 dark:text-red-300 hover:text-red-900 underline text-[11px]"
               >
                 <RotateCcw className="w-3 h-3" />
                 <span>Coba Lagi</span>
@@ -324,27 +331,27 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
 
           {/* Success Summary */}
           {uploadResult && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg space-y-2 text-xs">
-              <div className="flex items-center gap-1.5 font-bold text-emerald-900">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-lg space-y-2 text-xs">
+              <div className="flex items-center gap-1.5 font-bold text-emerald-900 dark:text-emerald-200">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>Impor Excel Berhasil!</span>
               </div>
               <div className="grid grid-cols-3 gap-2 pt-1 font-mono text-[11px]">
-                <div className="bg-white p-2 rounded border border-emerald-200 text-center">
-                  <span className="text-slate-500 block">Total Diproses</span>
-                  <span className="font-bold text-slate-900">{uploadResult.totalRowsProcessed}</span>
+                <div className="bg-white dark:bg-slate-800 p-2 rounded border border-emerald-200 dark:border-emerald-800 text-center">
+                  <span className="text-slate-500 dark:text-slate-400 block">Total Diproses</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{uploadResult.totalRowsProcessed}</span>
                 </div>
-                <div className="bg-white p-2 rounded border border-emerald-200 text-center">
-                  <span className="text-slate-500 block">Data Baru</span>
-                  <span className="font-bold text-emerald-700">+{uploadResult.recordsInserted}</span>
+                <div className="bg-white dark:bg-slate-800 p-2 rounded border border-emerald-200 dark:border-emerald-800 text-center">
+                  <span className="text-slate-500 dark:text-slate-400 block">Data Baru</span>
+                  <span className="font-bold text-emerald-700 dark:text-emerald-400">+{uploadResult.recordsInserted}</span>
                 </div>
-                <div className="bg-white p-2 rounded border border-emerald-200 text-center">
-                  <span className="text-slate-500 block">Diperbarui</span>
-                  <span className="font-bold text-blue-700">{uploadResult.recordsUpdated}</span>
+                <div className="bg-white dark:bg-slate-800 p-2 rounded border border-emerald-200 dark:border-emerald-800 text-center">
+                  <span className="text-slate-500 dark:text-slate-400 block">Diperbarui</span>
+                  <span className="font-bold text-blue-700 dark:text-blue-400">{uploadResult.recordsUpdated}</span>
                 </div>
               </div>
               {uploadResult.errors && uploadResult.errors.length > 0 && (
-                <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-[11px] text-amber-800 max-h-24 overflow-y-auto">
+                <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded text-[11px] text-amber-800 dark:text-amber-300 max-h-24 overflow-y-auto">
                   <span className="font-bold block mb-1">Catatan Baris Dilewati:</span>
                   <ul className="list-disc list-inside space-y-0.5">
                     {uploadResult.errors.slice(0, 5).map((err, idx) => (
@@ -361,10 +368,10 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
+        <div className="px-6 py-3 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-100"
+            className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             {uploadResult ? 'Selesai' : 'Batal'}
           </button>

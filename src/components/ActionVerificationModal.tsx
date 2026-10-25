@@ -185,11 +185,11 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full my-auto shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Header */}
-        <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <div className="px-5 sm:px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-mono text-xs font-bold text-red-400 shrink-0">{record.dtr_number}</span>
@@ -218,65 +218,65 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
         </div>
 
         {/* Tabs: Tim Area vs Tim Quality vs Kirim ke HMMI/HML */}
-        <div className="grid grid-cols-3 border-b border-slate-200 bg-slate-50 text-xs font-semibold">
+        <div className="grid grid-cols-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs font-semibold">
           <button
             onClick={() => setActiveTab('area')}
             className={`py-3 px-3 text-center border-b-2 transition-colors flex items-center justify-center gap-1.5 ${
               activeTab === 'area'
-                ? 'border-amber-600 text-amber-700 bg-white'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
+                ? 'border-amber-600 text-amber-700 dark:text-amber-400 bg-white dark:bg-slate-800'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Building className="w-3.5 h-3.5" />
             <span>1. Tim Area (HMSI)</span>
-            {record.area_received_date && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+            {record.area_received_date && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
           </button>
 
           <button
             onClick={() => setActiveTab('quality')}
             className={`py-3 px-3 text-center border-b-2 transition-colors flex items-center justify-center gap-1.5 ${
               activeTab === 'quality'
-                ? 'border-blue-600 text-blue-700 bg-white'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
+                ? 'border-blue-600 text-blue-700 dark:text-blue-400 bg-white dark:bg-slate-800'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>2. Tim Quality</span>
-            {record.quality_checked_date && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+            {record.quality_checked_date && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
           </button>
 
           <button
             onClick={() => setActiveTab('shipping')}
             className={`py-3 px-3 text-center border-b-2 transition-colors flex items-center justify-center gap-1.5 ${
               activeTab === 'shipping'
-                ? 'border-emerald-600 text-emerald-700 bg-white'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
+                ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-800'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Truck className="w-3.5 h-3.5" />
             <span>3. Kirim HMMI/HML</span>
-            {record.shipped_date && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+            {record.shipped_date && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
           </button>
         </div>
 
         {/* Tab Body */}
-        <div className="p-6 overflow-y-auto space-y-4 text-xs sm:text-sm">
+        <div className="p-6 overflow-y-auto space-y-4 text-xs sm:text-sm bg-white dark:bg-slate-900">
           
           {/* TAB 1: TIM AREA */}
           {activeTab === 'area' && (
             <form onSubmit={handleAreaSubmit} className="space-y-4">
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
-                <span className="font-bold text-amber-900 text-xs block">
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl space-y-1">
+                <span className="font-bold text-amber-900 dark:text-amber-300 text-xs block">
                   Peran Tim Area HMSI: Penerimaan Part dari Dealer
                 </span>
-                <p className="text-[11px] text-amber-800 leading-relaxed">
+                <p className="text-[11px] text-amber-800 dark:text-amber-200 leading-relaxed">
                   Ketika fisik part OFP tiba di kantor/transit HMSI dari dealer, Tim Area mengonfirmasi penerimaan dan memotret part sebagai bukti serah terima resmi.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Tanggal Diterima di HMSI <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -284,12 +284,12 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                     required
                     value={areaReceivedDate}
                     onChange={(e) => setAreaReceivedDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-amber-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-amber-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Nama Personil Tim Area Penerima <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -298,14 +298,14 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                     placeholder="Contoh: Budi Santoso (Area Jabodetabek)"
                     value={areaReceivedBy}
                     onChange={(e) => setAreaReceivedBy(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-amber-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-amber-500"
                   />
                 </div>
               </div>
 
               {/* Foto Bukti Penerimaan Tim Area */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Foto Bukti Penerimaan Fisik Part di HMSI
                 </label>
                 <input
@@ -318,7 +318,7 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                 />
 
                 {areaPhoto ? (
-                  <div className="relative rounded-xl border border-slate-200 overflow-hidden bg-slate-900 aspect-video max-h-48 flex items-center justify-center">
+                  <div className="relative rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-900 aspect-video max-h-48 flex items-center justify-center">
                     <img src={areaPhoto} alt="Bukti Foto Tim Area" className="w-full h-full object-contain" />
                     <button
                       type="button"
@@ -331,13 +331,13 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                 ) : (
                   <div
                     onClick={() => areaFileInputRef.current?.click()}
-                    className="border-2 border-dashed border-slate-300 hover:border-amber-500 rounded-xl p-4 text-center cursor-pointer bg-slate-50 transition-colors"
+                    className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 rounded-xl p-4 text-center cursor-pointer bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   >
                     <Camera className="w-8 h-8 mx-auto text-amber-600 mb-1" />
-                    <span className="font-semibold text-slate-800 text-xs block">
+                    <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs block">
                       Ambil Foto lewat Kamera HP atau Upload File Bukti
                     </span>
-                    <span className="text-[11px] text-slate-400">
+                    <span className="text-[11px] text-slate-400 dark:text-slate-500">
                       Foto part fisik yang tiba dengan label tag nomor DTR
                     </span>
                   </div>
@@ -346,7 +346,7 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
 
               {/* Catatan Tim Area */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Catatan Kondisi Fisik Part dari Tim Area
                 </label>
                 <textarea
@@ -354,7 +354,7 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                   placeholder="Catatan kemasan, label part, atau kondisi fisik saat diterima..."
                   value={areaNotes}
                   onChange={(e) => setAreaNotes(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-amber-500"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-amber-500"
                 />
               </div>
 
@@ -376,18 +376,18 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
           {/* TAB 2: TIM QUALITY */}
           {activeTab === 'quality' && (
             <form onSubmit={handleQualitySubmit} className="space-y-4">
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl space-y-1">
-                <span className="font-bold text-blue-900 text-xs block">
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 rounded-xl space-y-1">
+                <span className="font-bold text-blue-900 dark:text-blue-300 text-xs block">
                   Peran Tim Quality HMSI: Verifikasi Teknis Part
                 </span>
-                <p className="text-[11px] text-blue-800 leading-relaxed">
+                <p className="text-[11px] text-blue-800 dark:text-blue-200 leading-relaxed">
                   Tim Quality memeriksa keabsahan part yang diterima Tim Area, memastikan kondisi part dalam keadaan baik/layak diperiksa oleh Supplier HMMI/HML, dan mengambil foto verifikasi.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Tanggal Pengecekan Quality <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -395,12 +395,12 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                     required
                     value={qualityCheckedDate}
                     onChange={(e) => setQualityCheckedDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Nama Inspector Tim Quality <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -409,14 +409,14 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                     placeholder="Contoh: Andi Wijaya (QA Engineer)"
                     value={qualityCheckedBy}
                     onChange={(e) => setQualityCheckedBy(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
               {/* Pos / Lokasi Penyimpanan Part di Gudang Quality */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Pos / Lokasi Penyimpanan Part
                 </label>
                 <input
@@ -424,16 +424,16 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                   placeholder="Misalnya: L2.1, L3.1, Rak QA-02..."
                   value={qualityPos}
                   onChange={(e) => setQualityPos(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-blue-500 font-mono"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-blue-500 font-mono"
                 />
-                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 block">
                   Lokasi rak / pos part di gudang transit Tim Quality (muncul di label tag pengiriman ke HMMI)
                 </span>
               </div>
 
               {/* Foto Bukti Tim Quality */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Foto Bukti Pengecekan Kondisi Part oleh Tim Quality
                 </label>
                 <input
@@ -446,7 +446,7 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                 />
 
                 {qualityPhoto ? (
-                  <div className="relative rounded-xl border border-slate-200 overflow-hidden bg-slate-900 aspect-video max-h-48 flex items-center justify-center">
+                  <div className="relative rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-900 aspect-video max-h-48 flex items-center justify-center">
                     <img src={qualityPhoto} alt="Bukti Foto Tim Quality" className="w-full h-full object-contain" />
                     <button
                       type="button"
@@ -459,13 +459,13 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                 ) : (
                   <div
                     onClick={() => qualityFileInputRef.current?.click()}
-                    className="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-xl p-4 text-center cursor-pointer bg-slate-50 transition-colors"
+                    className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 rounded-xl p-4 text-center cursor-pointer bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   >
                     <Camera className="w-8 h-8 mx-auto text-blue-600 mb-1" />
-                    <span className="font-semibold text-slate-800 text-xs block">
+                    <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs block">
                       Ambil Foto Verifikasi Quality
                     </span>
-                    <span className="text-[11px] text-slate-400">
+                    <span className="text-[11px] text-slate-400 dark:text-slate-500">
                       Foto detail kondisi kerusakan part dan segel identifikasi
                     </span>
                   </div>
@@ -474,7 +474,7 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
 
               {/* Catatan Tim Quality */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Catatan Teknis Pengecekan Tim Quality
                 </label>
                 <textarea
@@ -482,7 +482,7 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                   placeholder="Catatan keabsahan kerusakan teknis sebelum part diserahkan ke pabrik HMMI/HML..."
                   value={qualityNotes}
                   onChange={(e) => setQualityNotes(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-blue-500"
                 />
               </div>
 
@@ -502,18 +502,18 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
           {/* TAB 3: PENGIRIMAN KE HMMI / HML */}
           {activeTab === 'shipping' && (
             <form onSubmit={handleShippingSubmit} className="space-y-4">
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1">
-                <span className="font-bold text-emerald-900 text-xs block">
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 rounded-xl space-y-1">
+                <span className="font-bold text-emerald-900 dark:text-emerald-300 text-xs block">
                   Pengiriman ke Supplier HMMI / HML (Tahap Selesai)
                 </span>
-                <p className="text-[11px] text-emerald-800 leading-relaxed">
+                <p className="text-[11px] text-emerald-800 dark:text-emerald-200 leading-relaxed">
                   Setelah diverifikasi oleh Quality, part dikirimkan ke Plant HMMI / HML Japan. Masukkan nomor Surat Jalan atau Resi untuk mengubah status menjadi <strong>Delivered</strong> dan menghentikan hitungan lead time!
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Tanggal Pengiriman ke HMMI/HML <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -521,12 +521,12 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                     required
                     value={shippedDate}
                     onChange={(e) => setShippedDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-emerald-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     No. Resi / Surat Jalan Pengiriman <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -535,12 +535,12 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                     placeholder="Contoh: SJ-HMSI-HMMI-26-0812"
                     value={shippingResi}
                     onChange={(e) => setShippingResi(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 font-mono text-xs focus:ring-1 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 font-mono text-xs focus:ring-1 focus:ring-emerald-500"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Ekspedisi / Metode Pengiriman
                   </label>
                   <input
@@ -548,7 +548,7 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                     placeholder="Contoh: Internal Shuttle Truck HMSI to Plant HMMI Purwakarta"
                     value={shippingCarrier}
                     onChange={(e) => setShippingCarrier(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-emerald-500"
                   />
                 </div>
               </div>
@@ -569,11 +569,11 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <span>Status Sekarang: <strong className="text-slate-800">{record.tracking_status}</strong></span>
+        <div className="px-6 py-3 bg-slate-50 dark:bg-slate-900/90 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+          <span>Status Sekarang: <strong className="text-slate-800 dark:text-slate-200">{record.tracking_status}</strong></span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50"
+            className="px-4 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             Tutup
           </button>

@@ -135,9 +135,7 @@ function drawSingleTag(
   const rawQpiNo = getSafeValue(record.qpi_number);
   const qpiInfo = formatQpiDisplay(rawQpiNo);
   const partName = getSafeValue(record.part_name);
-  const problem = getSafeValue(
-    record.problem || record.judgement_qpi || record.quality_notes || record.area_notes
-  );
+  const problem = getSafeValue(record.problem, '-');
   const chassisNo = getSafeValue(record.chassis_number);
   const engineNo = getSafeValue(record.engine_number);
   const km = record.mileage ? `${record.mileage.toLocaleString('id-ID')} km` : '-';
