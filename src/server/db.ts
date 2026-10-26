@@ -391,20 +391,41 @@ async function processPhotosForRecord(record: Partial<OpfRecord>): Promise<void>
   }
 }
 
-export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boolean; id: number }> {
-  await processPhotosForRecord(record);
+export async function insertOrUpdateOpf(
+  record: OpfRecord,
+  options: { syncToSupabase?: boolean; autoSave?: boolean } = {}
+): Promise<{ isNew: boolean; id: number }> {
+  const syncToSupabase = options.syncToSupabase ?? true;
+  const autoSave = options.autoSave ?? true;
+
+  if (record.area_photo?.startsWith('data:') || record.quality_photo?.startsWith('data:')) {
+    await processPhotosForRecord(record);
+  }
+
   const db = await getDb();
   const days = calculateDaysElapsed(record.request_date, record.shipped_date);
   const isOverdue = days > 30 && record.tracking_status !== 'Delivered' && record.tracking_status !== 'Sent to HMMI';
   const partNum = (record.part_number || '').trim();
 
+  // Robust default fallbacks for NOT NULL fields
+  const safeDtr = (record.dtr_number || '').trim() || 'TR-UNKNOWN';
+  const safePart = (record.part_name || '').trim() || '-';
+  const safeModel = (record.model || '').trim() || '-';
+  const safeChassis = (record.chassis_number || '').trim() || '-';
+  const safeEngine = (record.engine_number || '').trim() || '-';
+  const safeDealer = (record.dealer_name || '').trim() || '-';
+  const safeMileage = Number(record.mileage || 0) || 0;
+  const safeQty = Number(record.quantity || 1) || 1;
+  const safeReqDate = (record.request_date || '').trim() || new Date().toISOString().split('T')[0];
+  const safeStatus = (record.tracking_status || '').trim() || 'Waiting OFP';
+
   let checkStmt;
   if (partNum) {
     checkStmt = db.prepare('SELECT * FROM opf_records WHERE dtr_number = ? AND part_number = ? AND part_name = ?');
-    checkStmt.bind([record.dtr_number, partNum, record.part_name]);
+    checkStmt.bind([safeDtr, partNum, safePart]);
   } else {
     checkStmt = db.prepare('SELECT * FROM opf_records WHERE dtr_number = ? AND part_name = ?');
-    checkStmt.bind([record.dtr_number, record.part_name]);
+    checkStmt.bind([safeDtr, safePart]);
   }
 
   const exists = checkStmt.step();
@@ -416,19 +437,19 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
     db.run(
       `UPDATE opf_records SET part_name = ?, part_number = ?, quantity = ?, model = ?, chassis_number = ?, engine_number = ?, mileage = ?, dealer_name = ?, qpi_number = ?, judgement_qpi = ?, judgement_date = ?, request_date = ?, tracking_status = ?, problem = ?, pos = ?, occurred_date = ?, repair_date = ?, area_received_date = ?, area_received_by = ?, area_photo = ?, area_notes = ?, quality_checked_date = ?, quality_checked_by = ?, quality_photo = ?, quality_notes = ?, shipped_date = ?, shipping_resi = ?, shipping_carrier = ?, days_elapsed = ?, is_overdue = ?, updated_at = datetime('now') WHERE id = ?`,
       [
-        record.part_name,
+        safePart,
         partNum,
-        record.quantity || 1,
-        record.model,
-        record.chassis_number,
-        record.engine_number,
-        record.mileage,
-        record.dealer_name,
+        safeQty,
+        safeModel,
+        safeChassis,
+        safeEngine,
+        safeMileage,
+        safeDealer,
         record.qpi_number || '',
         record.judgement_qpi || '',
         record.judgement_date || null,
-        record.request_date,
-        record.tracking_status || existing.tracking_status,
+        safeReqDate,
+        record.tracking_status || existing.tracking_status || safeStatus,
         record.problem ?? existing.problem ?? '',
         record.pos ?? existing.pos ?? '',
         record.occurred_date ?? existing.occurred_date ?? null,
@@ -449,37 +470,41 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
         existing.id
       ]
     );
-    saveDb();
-    await syncRecordToSupabase({
-      ...existing,
-      ...record,
-      part_number: partNum,
-      tracking_status: record.tracking_status || existing.tracking_status,
-      problem: record.problem ?? existing.problem ?? '',
-      pos: record.pos ?? existing.pos ?? '',
-      occurred_date: record.occurred_date ?? existing.occurred_date ?? null,
-      repair_date: record.repair_date ?? existing.repair_date ?? null,
-    }, days, isOverdue);
+    if (autoSave) saveDb();
+    if (syncToSupabase) {
+      await syncRecordToSupabase({
+        ...existing,
+        ...record,
+        dtr_number: safeDtr,
+        part_name: safePart,
+        part_number: partNum,
+        tracking_status: record.tracking_status || existing.tracking_status,
+        problem: record.problem ?? existing.problem ?? '',
+        pos: record.pos ?? existing.pos ?? '',
+        occurred_date: record.occurred_date ?? existing.occurred_date ?? null,
+        repair_date: record.repair_date ?? existing.repair_date ?? null,
+      }, days, isOverdue);
+    }
     return { isNew: false, id: Number(existing.id) };
   }
 
   db.run(
     `INSERT INTO opf_records (dtr_number, part_name, part_number, quantity, model, chassis_number, engine_number, mileage, dealer_name, qpi_number, judgement_qpi, judgement_date, request_date, tracking_status, problem, pos, occurred_date, repair_date, area_received_date, area_received_by, area_photo, area_notes, quality_checked_date, quality_checked_by, quality_photo, quality_notes, shipped_date, shipping_resi, shipping_carrier, days_elapsed, is_overdue) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
     [
-      record.dtr_number,
-      record.part_name,
+      safeDtr,
+      safePart,
       partNum,
-      record.quantity || 1,
-      record.model,
-      record.chassis_number,
-      record.engine_number,
-      record.mileage,
-      record.dealer_name,
+      safeQty,
+      safeModel,
+      safeChassis,
+      safeEngine,
+      safeMileage,
+      safeDealer,
       record.qpi_number || '',
       record.judgement_qpi || '',
       record.judgement_date || null,
-      record.request_date || new Date().toISOString().split('T')[0],
-      record.tracking_status || 'Waiting OFP',
+      safeReqDate,
+      safeStatus,
       record.problem || '',
       record.pos || '',
       record.occurred_date || null,
@@ -502,42 +527,117 @@ export async function insertOrUpdateOpf(record: OpfRecord): Promise<{ isNew: boo
 
   const lastIdRes = db.exec('SELECT last_insert_rowid() as id');
   const newId = Number(lastIdRes[0].values[0][0]);
-  saveDb();
+  if (autoSave) saveDb();
 
-  // Sync to Supabase if configured
-  await syncRecordToSupabase({
-    ...record,
-    part_number: partNum,
-  }, days, isOverdue);
+  // Sync to Supabase if configured and requested
+  if (syncToSupabase) {
+    await syncRecordToSupabase({
+      ...record,
+      dtr_number: safeDtr,
+      part_name: safePart,
+      part_number: partNum,
+    }, days, isOverdue);
+  }
 
   return { isNew: true, id: newId };
 }
 
-export async function bulkInsertOrUpdateOpf(records: OpfRecord[]): Promise<ExcelImportResult> {
+// Mutex to serialize bulk database operations so concurrent transactions never collide
+let bulkOperationMutex: Promise<void> = Promise.resolve();
+
+export async function bulkInsertOrUpdateOpf(
+  records: OpfRecord[],
+  options: { syncToSupabase?: boolean } = {}
+): Promise<ExcelImportResult> {
+  const syncToSupabase = options.syncToSupabase ?? false;
+
+  // Queue up to ensure serialized, non-colliding execution
+  const currentLock = bulkOperationMutex;
+  let unlock: () => void = () => {};
+  bulkOperationMutex = new Promise<void>((resolve) => {
+    unlock = resolve;
+  });
+
+  try {
+    await currentLock;
+    return await executeBulkInsertOrUpdate(records, syncToSupabase);
+  } finally {
+    unlock();
+  }
+}
+
+async function executeBulkInsertOrUpdate(
+  records: OpfRecord[],
+  syncToSupabase: boolean
+): Promise<ExcelImportResult> {
   const db = await getDb();
   let totalRowsProcessed = 0;
   let recordsInserted = 0;
   let recordsUpdated = 0;
   const errors: string[] = [];
 
-  db.run('BEGIN TRANSACTION');
+  const savepointName = `sp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  let savepointActive = false;
+
   try {
+    db.run(`SAVEPOINT ${savepointName}`);
+    savepointActive = true;
+
     for (let i = 0; i < records.length; i++) {
       const record = records[i];
       try {
-        const res = await insertOrUpdateOpf(record);
+        const res = await insertOrUpdateOpf(record, {
+          syncToSupabase: false, // Never sync individual rows over HTTP during bulk operations
+          autoSave: false,       // Do not write SQLite disk file for every single row
+        });
         totalRowsProcessed++;
         if (res.isNew) recordsInserted++; else recordsUpdated++;
       } catch (err: any) {
         errors.push(`Baris ${i + 1} (${record.dtr_number || 'N/A'}): ${err.message || 'Gagal menyimpan'}`);
       }
     }
-    db.run('COMMIT');
+
+    if (savepointActive) {
+      db.run(`RELEASE ${savepointName}`);
+      savepointActive = false;
+    }
     saveDb();
   } catch (err: any) {
-    try { db.run('ROLLBACK'); } catch (_rb) {}
+    if (savepointActive) {
+      try { db.run(`ROLLBACK TO ${savepointName}`); } catch (_rb) {}
+      try { db.run(`RELEASE ${savepointName}`); } catch (_rel) {}
+      savepointActive = false;
+    }
     console.error('Bulk transaction error:', err);
     throw err;
+  }
+
+  // If syncToSupabase requested, do chunked batch upsert to Supabase outside the SQLite transaction
+  if (syncToSupabase && isSupabaseConfigured() && records.length > 0) {
+    const sb = getSupabaseClient();
+    if (sb) {
+      try {
+        const cols = await getSupabaseColumns();
+        const payload = records.map((r) => {
+          const days = calculateDaysElapsed(r.request_date, r.shipped_date);
+          const isOverdue = days > 30 && r.tracking_status !== 'Delivered' && r.tracking_status !== 'Sent to HMMI';
+          const { id: _id, ...rest } = r;
+          return filterRecordForSupabase({
+            ...rest,
+            days_elapsed: days,
+            is_overdue: isOverdue,
+            updated_at: new Date().toISOString(),
+          }, cols);
+        });
+
+        for (let i = 0; i < payload.length; i += 100) {
+          const chunk = payload.slice(i, i + 100);
+          await sb.from('opf_records').upsert(chunk, { onConflict: 'dtr_number,part_name' });
+        }
+      } catch (sbErr) {
+        console.warn('[SUPABASE] Batch upsert error:', sbErr);
+      }
+    }
   }
 
   return { totalRowsProcessed, recordsInserted, recordsUpdated, errors };

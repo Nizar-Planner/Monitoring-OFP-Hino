@@ -483,7 +483,7 @@ async function startServer() {
       try {
         console.log('[SUPABASE] Menarik data terbaru dari Supabase...');
         const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
-          setTimeout(() => resolve({ data: null, error: { message: 'Supabase sync timeout (5s)' } }), 5000)
+          setTimeout(() => resolve({ data: null, error: { message: 'Supabase sync timeout (12s)' } }), 12000)
         );
         const { data: remoteRecords, error } = (await Promise.race([
           supabase.from('opf_records').select('*'),
@@ -496,7 +496,7 @@ async function startServer() {
           const db = await getDb();
           db.run('DELETE FROM opf_records');
           if (remoteRecords.length > 0) {
-            await bulkInsertOrUpdateOpf(remoteRecords);
+            await bulkInsertOrUpdateOpf(remoteRecords, { syncToSupabase: false });
             console.log(`[SUPABASE] Berhasil menarik ${remoteRecords.length} record dari Supabase ke SQLite lokal.`);
           } else {
             saveDb();

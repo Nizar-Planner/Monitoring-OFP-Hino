@@ -11,6 +11,20 @@
     <meta name="twitter:card" content="summary_large_image" />
     <script>
       // Gracefully suppress benign Vite HMR WebSocket connection errors in sandbox iframe environment
+      (function() {
+        var origError = console.error;
+        console.error = function() {
+          var msg = arguments[0] ? String(arguments[0]) : '';
+          if (msg.includes('[vite]') || msg.includes('WebSocket') || msg.includes('failed to connect')) return;
+          origError.apply(console, arguments);
+        };
+        var origWarn = console.warn;
+        console.warn = function() {
+          var msg = arguments[0] ? String(arguments[0]) : '';
+          if (msg.includes('[vite]') || msg.includes('WebSocket') || msg.includes('failed to connect')) return;
+          origWarn.apply(console, arguments);
+        };
+      })();
       window.addEventListener('error', function (event) {
         if (
           event.message &&
