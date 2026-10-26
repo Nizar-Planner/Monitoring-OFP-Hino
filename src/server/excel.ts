@@ -55,7 +55,7 @@ export async function parseAndImportExcel(buffer: Buffer): Promise<ExcelImportRe
 
       const { data, error } = await supabase
         .from('opf_records')
-        .upsert(payload, { onConflict: 'dtr_number,part_name' }); // Menggunakan composite key/unique constraint
+        .upsert(payload, { onConflict: 'dtr_number,part_name' }); // Composite Key (dtr_number, part_name)
 
       if (error) {
         console.error('[EXCEL -> SUPABASE] Error upsert Supabase:', error.message);
