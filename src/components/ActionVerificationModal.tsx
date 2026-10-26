@@ -11,9 +11,13 @@ import {
   AlertTriangle,
   Upload,
   ArrowRight,
-  Send
+  Send,
+  RotateCcw,
+  Lock
 } from 'lucide-react';
-import { OpfRecord } from '../types';
+import { OpfRecord, isRecordAreaVerified } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { RollbackModal } from './RollbackModal';
 
 interface ActionVerificationModalProps {
   record: OpfRecord | null;
@@ -28,12 +32,25 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
 }) => {
   if (!record) return null;
 
-  const [activeTab, setActiveTab] = useState<'area' | 'quality' | 'shipping'>(
-    !record.area_received_date ? 'area' : !record.quality_checked_date ? 'quality' : 'shipping'
-  );
+  const { role, permissions, profile } = useAuth();
+  const [isRollbackOpen, setIsRollbackOpen] = useState(false);
+  const isAreaVerified = isRecordAreaVerified(record);
+
+  // Default active tab disesuaikan dengan role dan status alur kerja
+  const defaultTab = (() => {
+    if (role === 'Tim Area') return 'area';
+    if (role === 'Tim Quality') return isAreaVerified ? 'quality' : 'area';
+    if (!record.area_received_date) return 'area';
+    if (!record.quality_checked_date) return 'quality';
+    return 'shipping';
+  })();
+
+  const [activeTab, setActiveTab] = useState<'area' | 'quality' | 'shipping'>(defaultTab);
 
   // Tim Area State
-  const [areaReceivedBy, setAreaReceivedBy] = useState(record.area_received_by || '');
+  const [areaReceivedBy, setAreaReceivedBy] = useState(
+    record.area_received_by || (role === 'Tim Area' ? (profile?.full_name || '') : '')
+  );
   const [areaReceivedDate, setAreaReceivedDate] = useState(
     record.area_received_date || new Date().toISOString().split('T')[0]
   );
@@ -41,7 +58,9 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
   const [areaNotes, setAreaNotes] = useState(record.area_notes || '');
 
   // Tim Quality State
-  const [qualityCheckedBy, setQualityCheckedBy] = useState(record.quality_checked_by || '');
+  const [qualityCheckedBy, setQualityCheckedBy] = useState(
+    record.quality_checked_by || (role === 'Tim Quality' ? (profile?.full_name || '') : '')
+  );
   const [qualityCheckedDate, setQualityCheckedDate] = useState(
     record.quality_checked_date || new Date().toISOString().split('T')[0]
   );
@@ -267,12 +286,19 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
             <form onSubmit={handleAreaSubmit} className="space-y-4">
               <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl space-y-1">
                 <span className="font-bold text-amber-900 dark:text-amber-300 text-xs block">
-                  Peran Tim Area HMSI: Penerimaan Part dari Dealer
+                  Peran Tim Area HMSI: Penerimaan Part dari Dealer &amp; Update Status &quot;Area Verified&quot;
                 </span>
                 <p className="text-[11px] text-amber-800 dark:text-amber-200 leading-relaxed">
                   Ketika fisik part OFP tiba di kantor/transit HMSI dari dealer, Tim Area mengonfirmasi penerimaan dan memotret part sebagai bukti serah terima resmi.
                 </p>
               </div>
+
+              {!permissions.canVerifyArea && (
+                <div className="p-2.5 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 text-xs flex items-center gap-2">
+                  <Building className="w-4 h-4 text-slate-400 shrink-0" />
+                  <span>Mode Tinjauan: Anda masuk sebagai <strong>{role}</strong>. Hak akses verifikasi penerimaan fisik ini hanya dimiliki oleh Tim Area &amp; Super Admin.</span>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -282,9 +308,10 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                   <input
                     type="date"
                     required
+                    disabled={!permissions.canVerifyArea}
                     value={areaReceivedDate}
                     onChange={(e) => setAreaReceivedDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-amber-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-amber-500 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -295,10 +322,11 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                   <input
                     type="text"
                     required
+                    disabled={!permissions.canVerifyArea}
                     placeholder="Contoh: Budi Santoso (Area Jabodetabek)"
                     value={areaReceivedBy}
                     onChange={(e) => setAreaReceivedBy(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-amber-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-amber-500 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -320,18 +348,26 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                 {areaPhoto ? (
                   <div className="relative rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-900 aspect-video max-h-48 flex items-center justify-center">
                     <img src={areaPhoto} alt="Bukti Foto Tim Area" className="w-full h-full object-contain" />
-                    <button
-                      type="button"
-                      onClick={() => areaFileInputRef.current?.click()}
-                      className="absolute bottom-2 right-2 px-2.5 py-1 bg-black/70 hover:bg-black text-white text-[11px] rounded-lg flex items-center gap-1"
-                    >
-                      <Camera className="w-3.5 h-3.5" /> Ganti Foto
-                    </button>
+                    {permissions.canVerifyArea && (
+                      <button
+                        type="button"
+                        onClick={() => areaFileInputRef.current?.click()}
+                        className="absolute bottom-2 right-2 px-2.5 py-1 bg-black/70 hover:bg-black text-white text-[11px] rounded-lg flex items-center gap-1 cursor-pointer"
+                      >
+                        <Camera className="w-3.5 h-3.5" /> Ganti Foto
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div
-                    onClick={() => areaFileInputRef.current?.click()}
-                    className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 rounded-xl p-4 text-center cursor-pointer bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    onClick={() => {
+                      if (permissions.canVerifyArea) areaFileInputRef.current?.click();
+                    }}
+                    className={`border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-4 text-center transition-colors ${
+                      permissions.canVerifyArea
+                        ? 'hover:border-amber-500 dark:hover:border-amber-500 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer'
+                        : 'bg-slate-100/50 dark:bg-slate-800/20 cursor-not-allowed'
+                    }`}
                   >
                     <Camera className="w-8 h-8 mx-auto text-amber-600 mb-1" />
                     <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs block">
@@ -351,25 +387,28 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                 </label>
                 <textarea
                   rows={2}
+                  disabled={!permissions.canVerifyArea}
                   placeholder="Catatan kemasan, label part, atau kondisi fisik saat diterima..."
                   value={areaNotes}
                   onChange={(e) => setAreaNotes(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-amber-500"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-amber-500 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex items-center gap-1.5 px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg text-xs shadow-xs"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>
-                    {isSubmitting ? 'Menyimpan...' : 'Konfirmasi Part Tiba di HMSI & Kirim Notif ke Quality'}
-                  </span>
-                </button>
-              </div>
+              {permissions.canVerifyArea && (
+                <div className="pt-2 flex items-center justify-end gap-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex items-center gap-1.5 px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg text-xs shadow-xs cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>
+                      {isSubmitting ? 'Menyimpan...' : 'Konfirmasi Part Tiba di HMSI & Update Area Verified'}
+                    </span>
+                  </button>
+                </div>
+              )}
             </form>
           )}
 
@@ -385,6 +424,26 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                 </p>
               </div>
 
+              {/* VALIDASI KETAT: Aksi Tim Quality HANYA aktif jika status data sudah "Area Verified" */}
+              {!isAreaVerified && (
+                <div className="p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded-xl flex items-start gap-2.5 text-xs text-red-800 dark:text-red-300">
+                  <Lock className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block">VALIDASI KETAT ALUR KERJA:</span>
+                    <p className="leading-relaxed mt-0.5">
+                      Tombol dan form inspeksi Tim Quality <strong>HANYA aktif jika status data sudah &quot;Area Verified&quot;</strong> oleh Tim Area. Saat ini part masih berstatus <strong>{record.tracking_status}</strong> (menunggu fisik tiba dari dealer).
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {!permissions.canVerifyQuality && (
+                <div className="p-2.5 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 text-xs flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-slate-400 shrink-0" />
+                  <span>Mode Tinjauan: Anda masuk sebagai <strong>{role}</strong>. Hak akses verifikasi teknis ini hanya dimiliki oleh Tim Quality &amp; Super Admin.</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -393,9 +452,10 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                   <input
                     type="date"
                     required
+                    disabled={!isAreaVerified || !permissions.canVerifyQuality}
                     value={qualityCheckedDate}
                     onChange={(e) => setQualityCheckedDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -479,18 +539,35 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                 </label>
                 <textarea
                   rows={2}
+                  disabled={!isAreaVerified || !permissions.canVerifyQuality}
                   placeholder="Catatan keabsahan kerusakan teknis sebelum part diserahkan ke pabrik HMMI/HML..."
                   value={qualityNotes}
                   onChange={(e) => setQualityNotes(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2">
+              {/* Action Buttons: Rollback vs Simpan */}
+              <div className="pt-2 flex items-center justify-between gap-2 flex-wrap">
+                {permissions.canRollback && isAreaVerified && (
+                  <button
+                    type="button"
+                    onClick={() => setIsRollbackOpen(true)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-950/60 dark:hover:bg-red-900/80 dark:text-red-300 font-semibold rounded-lg text-xs transition-colors border border-red-300 dark:border-red-800 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Rollback / Reject ke Tim Area</span>
+                  </button>
+                )}
+
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="flex items-center gap-1.5 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs shadow-xs"
+                  disabled={isSubmitting || !isAreaVerified || !permissions.canVerifyQuality}
+                  className={`ml-auto flex items-center gap-1.5 px-5 py-2 font-semibold rounded-lg text-xs shadow-xs transition-all ${
+                    !isAreaVerified || !permissions.canVerifyQuality
+                      ? 'bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
+                  }`}
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   <span>{isSubmitting ? 'Menyimpan...' : 'Simpan Verifikasi Tim Quality'}</span>
@@ -511,6 +588,13 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                 </p>
               </div>
 
+              {!isAreaVerified && (
+                <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded-xl flex items-start gap-2 text-xs text-red-800 dark:text-red-300">
+                  <Lock className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  <span>Pengiriman ke HMMI terkunci: Part harus berstatus &quot;Area Verified&quot; terlebih dahulu sebelum dapat dikirimkan.</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -519,9 +603,10 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                   <input
                     type="date"
                     required
+                    disabled={!isAreaVerified || !permissions.canShipHmmi}
                     value={shippedDate}
                     onChange={(e) => setShippedDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -532,10 +617,11 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                   <input
                     type="text"
                     required
+                    disabled={!isAreaVerified || !permissions.canShipHmmi}
                     placeholder="Contoh: SJ-HMSI-HMMI-26-0812"
                     value={shippingResi}
                     onChange={(e) => setShippingResi(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 font-mono text-xs focus:ring-1 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 font-mono text-xs focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -545,24 +631,27 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
                   </label>
                   <input
                     type="text"
+                    disabled={!isAreaVerified || !permissions.canShipHmmi}
                     placeholder="Contoh: Internal Shuttle Truck HMSI to Plant HMMI Purwakarta"
                     value={shippingCarrier}
                     onChange={(e) => setShippingCarrier(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs shadow-xs"
-                >
-                  <Send className="w-4 h-4" />
-                  <span>{isSubmitting ? 'Menyimpan...' : 'Konfirmasi Pengiriman ke HMMI/HML (Delivered)'}</span>
-                </button>
-              </div>
+              {permissions.canShipHmmi && (
+                <div className="pt-2 flex items-center justify-end gap-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !isAreaVerified}
+                    className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>{isSubmitting ? 'Menyimpan...' : 'Konfirmasi Pengiriman ke HMMI/HML (Delivered)'}</span>
+                  </button>
+                </div>
+              )}
             </form>
           )}
 
@@ -573,11 +662,24 @@ export const ActionVerificationModal: React.FC<ActionVerificationModalProps> = (
           <span>Status Sekarang: <strong className="text-slate-800 dark:text-slate-200">{record.tracking_status}</strong></span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            className="px-4 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
           >
             Tutup
           </button>
         </div>
+
+        {/* Rollback Modal */}
+        {isRollbackOpen && (
+          <RollbackModal
+            record={record}
+            onClose={() => setIsRollbackOpen(false)}
+            onSuccess={() => {
+              setIsRollbackOpen(false);
+              onSuccess();
+              onClose();
+            }}
+          />
+        )}
 
       </div>
     </div>

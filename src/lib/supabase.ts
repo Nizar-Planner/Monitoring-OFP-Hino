@@ -46,6 +46,15 @@ export function isSupabaseConfigured(): boolean {
   );
 }
 
+/**
+ * Validasi alamat email kantor: Hanya domain perusahaan @hino.co.id yang diizinkan
+ */
+export function isValidCorporateEmail(email: string): boolean {
+  if (!email || typeof email !== 'string') return false;
+  const clean = email.trim().toLowerCase();
+  return /^[a-zA-Z0-9._%+-]+@([a-zA-Z0-9.-]+\.)?hino\.co\.id$/.test(clean);
+}
+
 let supabaseInstance: SupabaseClient | null = null;
 
 /**
@@ -56,10 +65,13 @@ export function getSupabaseClient(): SupabaseClient | null {
 
   if (isSupabaseConfigured()) {
     try {
+      const isBrowser = typeof window !== 'undefined';
       supabaseInstance = createClient(SUPABASE_URL, SUPABASE_KEY, {
         auth: {
-          persistSession: false,
-          autoRefreshToken: false,
+          persistSession: isBrowser,
+          autoRefreshToken: isBrowser,
+          detectSessionInUrl: isBrowser,
+          storage: isBrowser ? window.localStorage : undefined,
         },
       });
       console.log(`[SUPABASE] Connected to project: ${SUPABASE_URL}`);
@@ -72,6 +84,8 @@ export function getSupabaseClient(): SupabaseClient | null {
 
   return null;
 }
+
+export const supabase = getSupabaseClient();
 
 /**
  * Uploads a photo / file attachment (Base64 string, Buffer, or File) to Supabase Storage Bucket
@@ -164,8 +178,3 @@ export async function uploadPhotoToSupabase(
     return { success: false, publicUrl: '', error: err.message || 'Gagal mengunggah foto ke Supabase Storage.' };
   }
 }
-
-/**
- * Convenience export for files that expect a direct 'supabase' named export
- */
-export const supabase = getSupabaseClient();

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { LoginView } from './components/LoginView';
 import { Header } from './components/Header';
 import { WorkflowTrackerCards } from './components/WorkflowTrackerCards';
 import { AnalyticsCharts } from './components/AnalyticsCharts';
@@ -8,10 +10,13 @@ import { ManualEntryModal } from './components/ManualEntryModal';
 import { ActionVerificationModal } from './components/ActionVerificationModal';
 import { ExcelUploadModal } from './components/ExcelUploadModal';
 import { PrintTagView } from './components/PrintTagView';
+import { RollbackModal } from './components/RollbackModal';
 import { OpfRecord, StatsData, ExcelImportResult } from './types';
-import { Truck, AlertTriangle, CheckCircle2, FileSpreadsheet, ShieldAlert, Clock, ShieldCheck, Building } from 'lucide-react';
+import { Truck, AlertTriangle, CheckCircle2, FileSpreadsheet, Clock, ShieldCheck, Building, Loader2 } from 'lucide-react';
 
-export default function App() {
+function DashboardApp() {
+  const { user, profile, role, permissions, isLoading: isAuthLoading } = useAuth();
+
   const [records, setRecords] = useState<OpfRecord[]>([]);
   const [stats, setStats] = useState<StatsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,6 +51,7 @@ export default function App() {
   // Modals
   const [selectedRecord, setSelectedRecord] = useState<OpfRecord | null>(null);
   const [actionRecord, setActionRecord] = useState<OpfRecord | null>(null);
+  const [rollbackRecord, setRollbackRecord] = useState<OpfRecord | null>(null);
   const [isUploadExcelOpen, setIsUploadExcelOpen] = useState(false);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [isPrintTagOpen, setIsPrintTagOpen] = useState(false);
@@ -85,8 +91,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (user) {
+      fetchData();
+    }
+  }, [user, fetchData]);
 
   // Handle manual create / edit
   const handleCreateOrUpdate = async (record: OpfRecord) => {
@@ -118,6 +126,7 @@ export default function App() {
         await fetchData();
         if (selectedRecord?.id === id) setSelectedRecord(null);
         if (actionRecord?.id === id) setActionRecord(null);
+        if (rollbackRecord?.id === id) setRollbackRecord(null);
       } else {
         showToast(res.error || 'Gagal menghapus data.', 'error');
       }
@@ -146,6 +155,25 @@ export default function App() {
     setIsPrintTagOpen(true);
   };
 
+  // Loading state
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white font-sans">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-sm font-semibold tracking-wide text-slate-300">
+            Memuat Sistem Hino OFP Tracking...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // Auth gate: If user is not authenticated, show corporate login view
+  if (!user) {
+    return <LoginView />;
+  }
+
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-slate-100/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased transition-colors duration-200">
       
@@ -169,7 +197,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Header */}
+      {/* Main Header with User Role & Switcher */}
       <Header
         onOpenUploadExcel={() => setIsUploadExcelOpen(true)}
         onOpenManualEntry={() => setIsManualModalOpen(true)}
@@ -214,15 +242,19 @@ export default function App() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
-              <button
-                onClick={() => setIsUploadExcelOpen(true)}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
-              >
-                <FileSpreadsheet className="w-4 h-4" />
-                <span>Upload Excel Monitoring</span>
-              </button>
-            </div>
+            {/* Role-protected Upload Excel action button on Hero Banner */}
+            {permissions.canUploadExcel && (
+              <div className="flex items-center gap-3 shrink-0">
+                <button
+                  onClick={() => setIsUploadExcelOpen(true)}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
+                  title="Unggah File Excel Monitoring Baru"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  <span>Upload Excel Monitoring</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -284,6 +316,7 @@ export default function App() {
             isLoading={isLoading}
             onSelectRecord={(rec) => setSelectedRecord(rec)}
             onOpenActionModal={(rec) => setActionRecord(rec)}
+            onOpenRollbackModal={(rec) => setRollbackRecord(rec)}
             onDeleteRecord={handleDeleteRecord}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
@@ -363,6 +396,24 @@ export default function App() {
         }
       />
 
+      {/* MODAL 6: Rollback / Reject Modal ke Tim Area */}
+      <RollbackModal
+        record={rollbackRecord}
+        onClose={() => setRollbackRecord(null)}
+        onSuccess={async () => {
+          showToast('Part berhasil di-rollback ke Tim Area dengan catatan revisi.', 'warning');
+          await fetchData();
+        }}
+      />
+
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <DashboardApp />
+    </AuthProvider>
   );
 }

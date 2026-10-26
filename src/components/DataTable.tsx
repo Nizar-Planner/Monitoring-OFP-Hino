@@ -18,15 +18,19 @@ import {
   ShieldCheck,
   Truck,
   Tag,
-  Printer
+  Printer,
+  Lock,
+  RotateCcw
 } from 'lucide-react';
-import { OpfRecord, TrackingStatus } from '../types';
+import { OpfRecord, TrackingStatus, isRecordAreaVerified } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 interface DataTableProps {
   records: OpfRecord[];
   isLoading: boolean;
   onSelectRecord: (record: OpfRecord) => void;
   onOpenActionModal: (record: OpfRecord) => void;
+  onOpenRollbackModal?: (record: OpfRecord) => void;
   onDeleteRecord: (id: number) => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
@@ -42,6 +46,7 @@ export const DataTable: React.FC<DataTableProps> = ({
   isLoading,
   onSelectRecord,
   onOpenActionModal,
+  onOpenRollbackModal,
   onDeleteRecord,
   searchTerm,
   setSearchTerm,
@@ -51,6 +56,7 @@ export const DataTable: React.FC<DataTableProps> = ({
   setIsOverdueFilterActive,
   onPrintTags,
 }) => {
+  const { role, permissions } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedDealer, setSelectedDealer] = useState<string>('all');
@@ -77,8 +83,8 @@ export const DataTable: React.FC<DataTableProps> = ({
       if (statusFilter !== 'all') {
         const isWaitingGroup = (statusFilter === 'Waiting OFP' || statusFilter === 'Belum Terkirim') &&
           (r.tracking_status === 'Waiting OFP' || r.tracking_status === 'Belum Terkirim');
-        const isAreaGroup = (statusFilter === 'Not yet shipped' || statusFilter === 'Received by Area') &&
-          (r.tracking_status === 'Not yet shipped' || r.tracking_status === 'Received by Area');
+        const isAreaGroup = (statusFilter === 'Not yet shipped' || statusFilter === 'Received by Area' || statusFilter === 'Area Verified') &&
+          (r.tracking_status === 'Not yet shipped' || r.tracking_status === 'Received by Area' || r.tracking_status === 'Area Verified');
         const isDeliveredGroup = (statusFilter === 'Delivered' || statusFilter === 'Sent to HMMI') &&
           (r.tracking_status === 'Delivered' || r.tracking_status === 'Sent to HMMI');
 
@@ -186,12 +192,13 @@ export const DataTable: React.FC<DataTableProps> = ({
             <span>Belum Terkirim</span>
           </span>
         );
+      case 'Area Verified':
       case 'Received by Area':
       case 'Not yet shipped':
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-800 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900/60">
             <Building className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-            <span>Received by Area</span>
+            <span>Area Verified</span>
           </span>
         );
       case 'Sent to HMMI':
@@ -649,26 +656,116 @@ export const DataTable: React.FC<DataTableProps> = ({
                   {/* Tindakan Alur */}
                   <td className="py-3 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1.5">
-                      <button
-                        onClick={() => onOpenActionModal(item)}
-                        className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 ${
-                          item.tracking_status === 'Waiting OFP'
-                            ? 'bg-amber-600 hover:bg-amber-700 text-white'
-                            : item.tracking_status === 'Not yet shipped'
-                            ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                            : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
-                        }`}
-                        title="Perbarui Status, Upload Foto, atau Verifikasi"
-                      >
-                        {item.tracking_status === 'Waiting OFP' ? (
-                          <><span>Terima Area</span></>
-                        ) : item.tracking_status === 'Not yet shipped' ? (
-                          <><span>Verif / Kirim</span></>
-                        ) : (
-                          <><span>Rincian</span></>
-                        )}
-                      </button>
+                      {/* Role-based action button */}
+                      {role === 'Tim Viewer' ? (
+                        <button
+                          onClick={() => onSelectRecord(item)}
+                          className="px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
+                          title="Lihat Detail Lengkap (Read-Only)"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Detail</span>
+                        </button>
+                      ) : role === 'Tim Area' ? (
+                        <button
+                          onClick={() => onOpenActionModal(item)}
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 ${
+                            !isRecordAreaVerified(item)
+                              ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-xs'
+                              : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                          }`}
+                          title={!isRecordAreaVerified(item) ? 'Penerimaan Part dari Dealer' : 'Edit Verifikasi Area'}
+                        >
+                          <Building className="w-3.5 h-3.5" />
+                          <span>{!isRecordAreaVerified(item) ? 'Terima Area' : 'Edit Area'}</span>
+                        </button>
+                      ) : role === 'Tim Quality' ? (
+                        <>
+                          {isRecordAreaVerified(item) ? (
+                            <>
+                              <button
+                                onClick={() => onOpenActionModal(item)}
+                                className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 ${
+                                  item.tracking_status === 'Delivered' || item.tracking_status === 'Sent to HMMI'
+                                    ? 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
+                                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
+                                }`}
+                                title="Verifikasi Quality Check & Pengiriman ke HMMI"
+                              >
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                <span>
+                                  {item.tracking_status === 'Delivered' || item.tracking_status === 'Sent to HMMI'
+                                    ? 'Rincian Quality'
+                                    : 'Cek Quality'}
+                                </span>
+                              </button>
 
+                              {onOpenRollbackModal && item.tracking_status !== 'Delivered' && item.tracking_status !== 'Sent to HMMI' && (
+                                <button
+                                  onClick={() => onOpenRollbackModal(item)}
+                                  className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 rounded transition-colors"
+                                  title="Rollback / Tolak part ini kembali ke Tim Area"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <button
+                              disabled
+                              className="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-100 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500 cursor-not-allowed flex items-center gap-1 border border-slate-200 dark:border-slate-800"
+                              title="Terkunci: Menunggu Tim Area melakukan verifikasi penerimaan terlebih dahulu!"
+                            >
+                              <Lock className="w-3 h-3 text-slate-400" />
+                              <span>Menunggu Area</span>
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        /* Super Admin: Full Access */
+                        <>
+                          <button
+                            onClick={() => onOpenActionModal(item)}
+                            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 ${
+                              !isRecordAreaVerified(item)
+                                ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                                : item.tracking_status === 'Delivered' || item.tracking_status === 'Sent to HMMI'
+                                ? 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
+                                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                            }`}
+                            title="Aksi Alur Kerja"
+                          >
+                            {!isRecordAreaVerified(item) ? (
+                              <>
+                                <Building className="w-3.5 h-3.5" />
+                                <span>Terima Area</span>
+                              </>
+                            ) : item.tracking_status === 'Delivered' || item.tracking_status === 'Sent to HMMI' ? (
+                              <>
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                <span>Rincian</span>
+                              </>
+                            ) : (
+                              <>
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                <span>Verif / Kirim</span>
+                              </>
+                            )}
+                          </button>
+
+                          {onOpenRollbackModal && isRecordAreaVerified(item) && item.tracking_status !== 'Delivered' && (
+                            <button
+                              onClick={() => onOpenRollbackModal(item)}
+                              className="p-1 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded transition-colors"
+                              title="Rollback / Kembalikan ke Tim Area"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </>
+                      )}
+
+                      {/* Detail View Button */}
                       <button
                         onClick={() => onSelectRecord(item)}
                         className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors"
@@ -677,6 +774,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                         <Eye className="w-3.5 h-3.5" />
                       </button>
 
+                      {/* Print Tag Button */}
                       <button
                         onClick={() => handlePrintSingle(item)}
                         className="p-1 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded transition-colors"
@@ -685,7 +783,8 @@ export const DataTable: React.FC<DataTableProps> = ({
                         <Tag className="w-3.5 h-3.5" />
                       </button>
 
-                      {item.id && (
+                      {/* Delete button: Only for Super Admin */}
+                      {permissions.canDelete && item.id && (
                         <button
                           onClick={() => {
                             if (window.confirm(`Hapus data ${item.dtr_number} - ${item.part_name}?`)) {
@@ -693,7 +792,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                             }
                           }}
                           className="p-1 text-slate-300 dark:text-slate-600 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded transition-colors"
-                          title="Hapus Baris"
+                          title="Hapus Baris (Super Admin)"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

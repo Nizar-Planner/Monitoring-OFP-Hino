@@ -19,6 +19,7 @@ import {
   updateAreaReceipt,
   updateQualityInspection,
   updateDeliveryToHmmi,
+  rollbackRecordToArea,
   deleteOpfRecord,
   getOpfStats,
   isUsingSupabase,
@@ -294,6 +295,26 @@ app.put('/api/opf/:id/quality-check', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Nama personil Tim Quality wajib diisi.' });
     }
 
+    const existing = await getOpfById(id);
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Data OPF tidak ditemukan.' });
+    }
+
+    // VALIDASI KETAT WORKFLOW: Aksi Tim Quality HANYA aktif jika status data sudah "Area Verified" (atau sudah ada area_received_date)
+    const isAreaVerified = Boolean(
+      existing.area_received_date ||
+      existing.tracking_status === 'Area Verified' ||
+      existing.tracking_status === 'Received by Area' ||
+      existing.tracking_status === 'Not yet shipped'
+    );
+
+    if (!isAreaVerified) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validasi Alur Kerja Gagal: Part OFP harus berstatus "Area Verified" oleh Tim Area terlebih dahulu sebelum diverifikasi oleh Tim Quality.'
+      });
+    }
+
     await updateQualityInspection(id, {
       quality_checked_by,
       quality_photo,
@@ -311,6 +332,36 @@ app.put('/api/opf/:id/quality-check', async (req, res) => {
   } catch (error: any) {
     console.error('Error updating quality inspection:', error);
     res.status(500).json({ success: false, error: error.message || 'Gagal menyimpan verifikasi Tim Quality.' });
+  }
+});
+
+// 7b. Action Tim Quality / Super Admin: Rollback / Reject to Tim Area with revision notes
+app.put('/api/opf/:id/rollback', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const { rejected_by, revision_notes } = req.body;
+
+    if (!revision_notes || !revision_notes.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Catatan revisi / alasan penolakan wajib diisi agar Tim Area dapat memperbaiki data/fisik part.'
+      });
+    }
+
+    await rollbackRecordToArea(id, {
+      rejected_by: rejected_by || 'Tim Quality',
+      revision_notes: revision_notes.trim(),
+    });
+
+    const updated = await getOpfById(id);
+    res.json({
+      success: true,
+      message: 'Status part OFP berhasil di-rollback ke Tim Area beserta catatan revisi.',
+      data: updated,
+    });
+  } catch (error: any) {
+    console.error('Error rolling back record:', error);
+    res.status(500).json({ success: false, error: error.message || 'Gagal melakukan rollback data.' });
   }
 });
 

@@ -1,10 +1,105 @@
 export type TrackingStatus =
   | 'Belum Terkirim'
+  | 'Area Verified'
   | 'Received by Area'
   | 'Sent to HMMI'
   | 'Waiting OFP'
   | 'Not yet shipped'
   | 'Delivered';
+
+export type UserRole = 'Super Admin' | 'Tim Quality' | 'Tim Area' | 'Tim Viewer';
+
+export interface UserProfile {
+  id: string; // Foreign key ke auth.users.id
+  email: string;
+  role: UserRole;
+  full_name?: string;
+  department?: string;
+  avatar_url?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface RolePermissions {
+  canVerifyArea: boolean;        // Tim Area & Super Admin: terima fisik part & update Area Verified
+  canVerifyQuality: boolean;     // Tim Quality & Super Admin: inspeksi kualitas
+  canShipHmmi: boolean;          // Tim Quality & Super Admin: kirim ke pabrik HMMI/HML
+  canRollback: boolean;          // Tim Quality & Super Admin: kembalikan/reject status ke Tim Area
+  canUploadExcel: boolean;       // Super Admin: impor master data Excel
+  canCreateManual: boolean;      // Tim Area, Tim Quality, Super Admin: input DTR baru
+  canDelete: boolean;            // Super Admin: hapus record
+  canExport: boolean;            // Semua role (termasuk Tim Viewer): ekspor CSV & Print Tag
+  isReadOnly: boolean;           // Tim Viewer: read-only
+}
+
+export function getRolePermissions(role: UserRole): RolePermissions {
+  switch (role) {
+    case 'Super Admin':
+      return {
+        canVerifyArea: true,
+        canVerifyQuality: true,
+        canShipHmmi: true,
+        canRollback: true,
+        canUploadExcel: true,
+        canCreateManual: true,
+        canDelete: true,
+        canExport: true,
+        isReadOnly: false,
+      };
+    case 'Tim Quality':
+      return {
+        canVerifyArea: false,
+        canVerifyQuality: true,
+        canShipHmmi: true,
+        canRollback: true,
+        canUploadExcel: false,
+        canCreateManual: true,
+        canDelete: false,
+        canExport: true,
+        isReadOnly: false,
+      };
+    case 'Tim Area':
+      return {
+        canVerifyArea: true,
+        canVerifyQuality: false,
+        canShipHmmi: false,
+        canRollback: false,
+        canUploadExcel: false,
+        canCreateManual: true,
+        canDelete: false,
+        canExport: true,
+        isReadOnly: false,
+      };
+    case 'Tim Viewer':
+    default:
+      return {
+        canVerifyArea: false,
+        canVerifyQuality: false,
+        canShipHmmi: false,
+        canRollback: false,
+        canUploadExcel: false,
+        canCreateManual: false,
+        canDelete: false,
+        canExport: true,
+        isReadOnly: true,
+      };
+  }
+}
+
+/**
+ * Validasi apakah record OFP sudah berstatus "Area Verified" (atau alias Received by Area)
+ * Syarat ketat sebelum Tim Quality dapat melakukan aksi pengecekan atau pengiriman ke HMMI.
+ */
+export function isRecordAreaVerified(record: OpfRecord | null | undefined): boolean {
+  if (!record) return false;
+  const status = (record.tracking_status || '').toLowerCase();
+  return (
+    status === 'area verified' ||
+    status === 'received by area' ||
+    status === 'not yet shipped' ||
+    Boolean(record.area_received_date)
+  );
+}
 
 export interface OpfRecord {
   id?: number;

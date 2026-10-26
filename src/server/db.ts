@@ -673,7 +673,7 @@ export async function updateAreaReceipt(id: number, data: {
   const rec = await getOpfById(id);
   const db = await getDb();
   db.run(
-    `UPDATE opf_records SET area_received_date = ?, area_received_by = ?, area_photo = COALESCE(NULLIF(?, ''), area_photo), area_notes = ?, tracking_status = 'Not yet shipped', updated_at = datetime('now') WHERE id = ?`,
+    `UPDATE opf_records SET area_received_date = ?, area_received_by = ?, area_photo = COALESCE(NULLIF(?, ''), area_photo), area_notes = ?, tracking_status = 'Area Verified', updated_at = datetime('now') WHERE id = ?`,
     [date, data.area_received_by, photoUrl, data.area_notes || '', id]
   );
   saveDb();
@@ -687,7 +687,7 @@ export async function updateAreaReceipt(id: number, data: {
         area_received_by: data.area_received_by,
         area_photo: photoUrl || rec.area_photo || '',
         area_notes: data.area_notes || '',
-        tracking_status: 'Not yet shipped',
+        tracking_status: 'Area Verified',
         updated_at: new Date().toISOString(),
       };
       const payload = filterRecordForSupabase(rawPayload, cols);
@@ -775,6 +775,49 @@ export async function updateDeliveryToHmmi(id: number, data: {
       await sb.from('opf_records').update(payload).eq('dtr_number', rec.dtr_number).eq('part_name', rec.part_name);
     } catch (sbErr) {
       console.warn('[SUPABASE] Gagal update shipping ke Supabase:', sbErr);
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Logika Alur Kerja (Workflow): Rollback / Reject dari Tim Quality kembali ke Tim Area
+ * Mengembalikan status ke Waiting OFP / Belum Terkirim beserta catatan revisi teknis.
+ */
+export async function rollbackRecordToArea(id: number, data: {
+  rejected_by: string;
+  revision_notes: string;
+}): Promise<boolean> {
+  const rec = await getOpfById(id);
+  if (!rec) throw new Error('Data OPF tidak ditemukan.');
+
+  const timestamp = new Date().toLocaleString('id-ID');
+  const revisionEntry = `[ROLLBACK TIM QUALITY - ${timestamp} oleh ${data.rejected_by}]: ${data.revision_notes}`;
+  const updatedNotes = rec.quality_notes ? `${rec.quality_notes}\n${revisionEntry}` : revisionEntry;
+
+  const db = await getDb();
+  db.run(
+    `UPDATE opf_records SET area_received_date = null, quality_checked_date = null, quality_notes = ?, tracking_status = 'Waiting OFP', updated_at = datetime('now') WHERE id = ?`,
+    [updatedNotes, id]
+  );
+  saveDb();
+
+  const sb = getSupabaseClient();
+  if (isSupabaseConfigured() && sb && rec) {
+    try {
+      const cols = await getSupabaseColumns();
+      const rawPayload = {
+        area_received_date: null,
+        quality_checked_date: null,
+        quality_notes: updatedNotes,
+        tracking_status: 'Waiting OFP',
+        updated_at: new Date().toISOString(),
+      };
+      const payload = filterRecordForSupabase(rawPayload, cols);
+      await sb.from('opf_records').update(payload).eq('dtr_number', rec.dtr_number).eq('part_name', rec.part_name);
+    } catch (sbErr) {
+      console.warn('[SUPABASE] Gagal rollback record ke Supabase:', sbErr);
     }
   }
 
