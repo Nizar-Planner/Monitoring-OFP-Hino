@@ -517,7 +517,7 @@ async function startServer() {
         hmr: false,
         watch: null,
       },
-      appType: 'spa',
+      appType: 'custom',
     });
     app.use(vite.middlewares);
     app.use('*', async (req, res, next) => {
@@ -526,6 +526,81 @@ async function startServer() {
       try {
         let template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
         template = await vite.transformIndexHtml(url, template);
+        // Ensure MockHmrWebSocket is placed BEFORE /@vite/client so Vite HMR never attempts an external socket or throws errors
+        const mockWsScript = `<script>
+(function() {
+  // Suppress benign Vite HMR websocket connection error messages
+  var origError = console.error;
+  console.error = function() {
+    var msg = arguments[0] ? String(arguments[0]) : '';
+    if (msg.includes('[vite]') || msg.includes('WebSocket') || msg.includes('failed to connect') || msg.includes('24678')) return;
+    origError.apply(console, arguments);
+  };
+  var origWarn = console.warn;
+  console.warn = function() {
+    var msg = arguments[0] ? String(arguments[0]) : '';
+    if (msg.includes('[vite]') || msg.includes('WebSocket') || msg.includes('failed to connect') || msg.includes('24678')) return;
+    origWarn.apply(console, arguments);
+  };
+  window.addEventListener('error', function(event) {
+    if (event.message && (event.message.includes('WebSocket') || event.message.includes('createWebSocketModuleRunnerTransport') || event.message.includes('failed to connect') || (event.filename && event.filename.includes('@vite/client')))) {
+      event.stopImmediatePropagation();
+      event.preventDefault();
+    }
+  }, true);
+  window.addEventListener('unhandledrejection', function(event) {
+    var str = String((event.reason && (event.reason.stack || event.reason)) || '');
+    if (str.includes('WebSocket') || str.includes('@vite/client') || str.includes('createWebSocketModuleRunnerTransport')) {
+      event.stopImmediatePropagation();
+      event.preventDefault();
+    }
+  }, true);
+
+  var NativeWS = window.WebSocket;
+  if (!NativeWS) return;
+  function MockHmrWebSocket(url, protocols) {
+    if (protocols === 'vite-hmr' || (typeof url === 'string' && (url.includes('token=') || url.includes('24678') || url.includes('vite')))) {
+      this.readyState = 1;
+      this.OPEN = 1;
+      this.CONNECTING = 0;
+      this.CLOSING = 2;
+      this.CLOSED = 3;
+      this.binaryType = 'blob';
+      this.bufferedAmount = 0;
+      this.extensions = '';
+      this.protocol = 'vite-hmr';
+      this.url = url;
+      this.send = function() {};
+      this.close = function() {};
+      this.addEventListener = function(type, listener) {
+        if (type === 'open') {
+          setTimeout(function() {
+            try {
+              if (typeof listener === 'function') listener({ type: 'open' });
+              else if (listener && typeof listener.handleEvent === 'function') listener.handleEvent({ type: 'open' });
+            } catch(e) {}
+          }, 0);
+        }
+      };
+      this.removeEventListener = function() {};
+      this.dispatchEvent = function() { return true; };
+      return this;
+    }
+    return new NativeWS(url, protocols);
+  }
+  MockHmrWebSocket.prototype = NativeWS.prototype;
+  MockHmrWebSocket.CONNECTING = 0;
+  MockHmrWebSocket.OPEN = 1;
+  MockHmrWebSocket.CLOSING = 2;
+  MockHmrWebSocket.CLOSED = 3;
+  window.WebSocket = MockHmrWebSocket;
+})();
+</script>`;
+        if (template.includes('<script type="module" src="/@vite/client"></script>')) {
+          template = template.replace('<script type="module" src="/@vite/client"></script>', `${mockWsScript}\n    <script type="module" src="/@vite/client"></script>`);
+        } else {
+          template = template.replace('<head>', `<head>\n    ${mockWsScript}`);
+        }
         res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
       } catch (e) {
         next(e);
