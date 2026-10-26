@@ -8,8 +8,10 @@ import {
   uploadPhotoToSupabase,
   SUPABASE_STORAGE_BUCKET
 } from '../lib/supabase.ts';
+import { isExcludedJudgement, EXCLUDED_JUDGEMENTS } from '../utils/excelParser.ts';
 
 export type { OpfRecord, StatsData, TrackingStatus, ExcelImportResult };
+export { isExcludedJudgement, EXCLUDED_JUDGEMENTS };
 
 let dbInstance: Database | null = null;
 const DATA_DIR = path.resolve(process.cwd(), 'data');
@@ -395,6 +397,11 @@ export async function insertOrUpdateOpf(
   record: OpfRecord,
   options: { syncToSupabase?: boolean; autoSave?: boolean } = {}
 ): Promise<{ isNew: boolean; id: number }> {
+  // Lewati penyimpanan jika status judgement termasuk dalam daftar pengecualian
+  if (isExcludedJudgement(record.judgement_qpi)) {
+    return { isNew: false, id: 0 };
+  }
+
   const syncToSupabase = options.syncToSupabase ?? true;
   const autoSave = options.autoSave ?? true;
 
@@ -585,6 +592,12 @@ async function executeBulkInsertOrUpdate(
 
     for (let i = 0; i < records.length; i++) {
       const record = records[i];
+
+      // 1, 2 & 3. Periksa status judgement dan lewati (continue) jika termasuk dalam daftar pengecualian
+      if (isExcludedJudgement(record.judgement_qpi)) {
+        continue;
+      }
+
       try {
         const res = await insertOrUpdateOpf(record, {
           syncToSupabase: false, // Never sync individual rows over HTTP during bulk operations
@@ -613,12 +626,13 @@ async function executeBulkInsertOrUpdate(
   }
 
   // If syncToSupabase requested, do chunked batch upsert to Supabase outside the SQLite transaction
-  if (syncToSupabase && isSupabaseConfigured() && records.length > 0) {
+  const validRecords = records.filter((r) => !isExcludedJudgement(r.judgement_qpi));
+  if (syncToSupabase && isSupabaseConfigured() && validRecords.length > 0) {
     const sb = getSupabaseClient();
     if (sb) {
       try {
         const cols = await getSupabaseColumns();
-        const payload = records.map((r) => {
+        const payload = validRecords.map((r) => {
           const days = calculateDaysElapsed(r.request_date, r.shipped_date);
           const isOverdue = days > 30 && r.tracking_status !== 'Delivered' && r.tracking_status !== 'Sent to HMMI';
           const { id: _id, ...rest } = r;

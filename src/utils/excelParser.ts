@@ -165,6 +165,48 @@ export function parseExcelDate(val: any, fallbackToToday: boolean = true): strin
 }
 
 /**
+ * Daftar status judgement yang dikecualikan dari proses impor/sinkronisasi.
+ * Baris data dengan status ini akan dilewati (skip via continue) sehingga tidak ada
+ * data OFP yang dikirim, diproses, disimpan, atau diperbarui ke Supabase / SQLite.
+ */
+export const EXCLUDED_JUDGEMENTS: readonly string[] = [
+  'rejected',
+  '#na',
+  '#n/a',
+  'waiting judgement',
+  'waiting judgment',
+  'waiting',
+];
+
+/**
+ * Mengambil nilai mentah kolom judgement dari rowMap
+ */
+export function extractJudgementFromRowMap(rowMap: Record<string, any>): string {
+  return String(
+    rowMap['judgement'] ||
+    rowMap['judgment'] ||
+    rowMap['judgementqpi'] ||
+    rowMap['judgmentqpi'] ||
+    rowMap['putusanqpi'] ||
+    rowMap['statusqpi'] ||
+    rowMap['hasiljudgement'] ||
+    rowMap['hasiljudgment'] ||
+    ''
+  ).trim();
+}
+
+/**
+ * Memeriksa apakah nilai kolom judgement termasuk dalam daftar pengecualian.
+ * Mengabaikan perbedaan spasi dan huruf besar/kecil (.trim() dan .toLowerCase()).
+ */
+export function isExcludedJudgement(judgementVal: any): boolean {
+  if (judgementVal === null || judgementVal === undefined) return false;
+  const cleaned = String(judgementVal).trim().toLowerCase();
+  if (!cleaned) return false;
+  return EXCLUDED_JUDGEMENTS.includes(cleaned);
+}
+
+/**
  * Membaca lembar kerja Excel (XLSX Worksheet) dan mengekstrak data OpfRecord
  * dengan deteksi kolom header otomatis dan logika penetapan status klaim.
  */
@@ -217,6 +259,15 @@ export function extractOpfRecordsFromSheet(worksheet: XLSX.WorkSheet): { records
       for (const [k, v] of Object.entries(raw)) {
         rowMap[normalizeKey(k)] = v;
       }
+
+      // 1 & 2. Ekstrak nilai kolom judgement dan bersihkan dengan .trim() dan .toLowerCase()
+      const cleanedJudgement = extractJudgementFromRowMap(rowMap).toLowerCase();
+
+      // 3. Jika nilai judgement termasuk dalam daftar pengecualian, lewati baris via continue
+      if (EXCLUDED_JUDGEMENTS.includes(cleanedJudgement)) {
+        continue;
+      }
+
       processRowMap(rowMap, rowNum, records, errors);
     }
     return { records, errors };
@@ -233,6 +284,14 @@ export function extractOpfRecordsFromSheet(worksheet: XLSX.WorkSheet): { records
     const rowMap: Record<string, any> = {};
     for (const [normKey, colIdx] of Object.entries(headerColMap)) {
       rowMap[normKey] = row[colIdx] !== undefined ? row[colIdx] : '';
+    }
+
+    // 1 & 2. Ekstrak nilai kolom judgement dan bersihkan dengan .trim() dan .toLowerCase()
+    const cleanedJudgement = extractJudgementFromRowMap(rowMap).toLowerCase();
+
+    // 3. Jika nilai judgement termasuk dalam daftar pengecualian, lewati baris via continue
+    if (EXCLUDED_JUDGEMENTS.includes(cleanedJudgement)) {
+      continue;
     }
 
     processRowMap(rowMap, r + 1, records, errors);
@@ -294,9 +353,15 @@ function processRowMap(
   ).trim();
 
   // 10. Kolom Judgment
-  const judgment = String(
-    rowMap['judgment'] || rowMap['judgement'] || rowMap['judgementqpi'] || rowMap['judgmentqpi'] || rowMap['putusanqpi'] || rowMap['statusqpi'] || 'Pending Inspection'
-  ).trim();
+  const rawJudgement = extractJudgementFromRowMap(rowMap);
+  const cleanedJudgement = rawJudgement.toLowerCase();
+
+  // Safety filter: Jangan proses baris jika status judgement termasuk daftar pengecualian
+  if (EXCLUDED_JUDGEMENTS.includes(cleanedJudgement)) {
+    return;
+  }
+
+  const judgment = rawJudgement || 'Pending Inspection';
 
   // 11. Kolom Judgement Date
   const rawJudgementDate =

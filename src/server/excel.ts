@@ -1,10 +1,26 @@
 import * as XLSX from 'xlsx';
 import { OpfRecord, ExcelImportResult } from '../types.js';
 import { bulkInsertOrUpdateOpf } from './db.js';
-import { extractOpfRecordsFromSheet, normalizeKey, parseExcelDate, parseSafeExcelDate } from '../utils/excelParser.js';
+import {
+  extractOpfRecordsFromSheet,
+  normalizeKey,
+  parseExcelDate,
+  parseSafeExcelDate,
+  EXCLUDED_JUDGEMENTS,
+  isExcludedJudgement,
+  extractJudgementFromRowMap,
+} from '../utils/excelParser.js';
 import { supabase, isSupabaseConfigured } from '../lib/supabase.js';
 
-export { extractOpfRecordsFromSheet, normalizeKey, parseExcelDate, parseSafeExcelDate };
+export {
+  extractOpfRecordsFromSheet,
+  normalizeKey,
+  parseExcelDate,
+  parseSafeExcelDate,
+  EXCLUDED_JUDGEMENTS,
+  isExcludedJudgement,
+  extractJudgementFromRowMap,
+};
 
 /**
  * Reads Excel file buffer, inserts/upserts directly to Supabase as Single Source of Truth,
