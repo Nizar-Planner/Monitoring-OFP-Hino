@@ -17,16 +17,25 @@ function getEnvVar(key: string): string {
   return '';
 }
 
-export const SUPABASE_URL = 
-  getEnvVar('VITE_SUPABASE_URL') || 
-  getEnvVar('SUPABASE_URL') || 
-  '';
+export function getSupabaseUrl(): string {
+  return (
+    getEnvVar('VITE_SUPABASE_URL') || 
+    getEnvVar('SUPABASE_URL') || 
+    ''
+  );
+}
 
-export const SUPABASE_KEY = 
-  getEnvVar('SUPABASE_SERVICE_ROLE_KEY') || 
-  getEnvVar('VITE_SUPABASE_ANON_KEY') || 
-  getEnvVar('SUPABASE_ANON_KEY') || 
-  '';
+export function getSupabaseKey(): string {
+  return (
+    getEnvVar('SUPABASE_SERVICE_ROLE_KEY') || 
+    getEnvVar('VITE_SUPABASE_ANON_KEY') || 
+    getEnvVar('SUPABASE_ANON_KEY') || 
+    ''
+  );
+}
+
+export const SUPABASE_URL = getSupabaseUrl();
+export const SUPABASE_KEY = getSupabaseKey();
 
 export const SUPABASE_STORAGE_BUCKET = 
   getEnvVar('SUPABASE_STORAGE_BUCKET') || 
@@ -36,13 +45,15 @@ export const SUPABASE_STORAGE_BUCKET =
  * Checks whether valid Supabase credentials have been configured
  */
 export function isSupabaseConfigured(): boolean {
+  const url = getSupabaseUrl();
+  const key = getSupabaseKey();
   return (
-    Boolean(SUPABASE_URL) &&
-    !SUPABASE_URL.includes('your-project') &&
-    SUPABASE_URL.startsWith('http') &&
-    Boolean(SUPABASE_KEY) &&
-    !SUPABASE_KEY.includes('your-anon-key') &&
-    !SUPABASE_KEY.includes('your-service-role-key')
+    Boolean(url) &&
+    !url.includes('your-project') &&
+    url.startsWith('http') &&
+    Boolean(key) &&
+    !key.includes('your-anon-key') &&
+    !key.includes('your-service-role-key')
   );
 }
 
@@ -65,8 +76,10 @@ export function getSupabaseClient(): SupabaseClient | null {
 
   if (isSupabaseConfigured()) {
     try {
+      const url = getSupabaseUrl();
+      const key = getSupabaseKey();
       const isBrowser = typeof window !== 'undefined';
-      supabaseInstance = createClient(SUPABASE_URL, SUPABASE_KEY, {
+      supabaseInstance = createClient(url, key, {
         auth: {
           persistSession: isBrowser,
           autoRefreshToken: isBrowser,
@@ -74,7 +87,7 @@ export function getSupabaseClient(): SupabaseClient | null {
           storage: isBrowser ? window.localStorage : undefined,
         },
       });
-      console.log(`[SUPABASE] Connected to project: ${SUPABASE_URL}`);
+      console.log(`[SUPABASE] Connected to project: ${url}`);
       return supabaseInstance;
     } catch (err) {
       console.error('[SUPABASE] Failed to initialize Supabase client:', err);
@@ -85,7 +98,15 @@ export function getSupabaseClient(): SupabaseClient | null {
   return null;
 }
 
-export const supabase = getSupabaseClient();
+// Dynamic proxy so imported supabase is always live
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    const client = getSupabaseClient();
+    if (!client) return undefined;
+    const val = (client as any)[prop];
+    return typeof val === 'function' ? val.bind(client) : val;
+  },
+});
 
 /**
  * Uploads a photo / file attachment (Base64 string, Buffer, or File) to Supabase Storage Bucket

@@ -31,6 +31,7 @@ import {
   getAllUserProfiles,
   updateUserProfileRole,
   createUserProfile,
+  deleteUserProfile,
   getAreaPendingOfpSummary,
   logNotification,
   getNotificationHistory
@@ -586,6 +587,17 @@ app.post('/api/users', async (req, res) => {
   } catch (error: any) {
     console.error('Error creating user profile:', error);
     res.status(500).json({ success: false, error: error.message || 'Gagal menambahkan profil pengguna.' });
+  }
+});
+
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    await deleteUserProfile(id);
+    res.json({ success: true, message: 'Pengguna berhasil dihapus.' });
+  } catch (error: any) {
+    console.error('Error deleting user profile:', error);
+    res.status(500).json({ success: false, error: error.message || 'Gagal menghapus pengguna.' });
   }
 });
 

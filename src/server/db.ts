@@ -1,6 +1,7 @@
 import initSqlJs, { Database, SqlValue } from 'sql.js';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { OpfRecord, StatsData, TrackingStatus, ExcelImportResult, UserProfile, UserRole } from '../types.ts';
 import {
   getSupabaseClient,
@@ -392,10 +393,39 @@ function createLocalTables(db: Database): void {
     );
   `);
 
-  // Bersihkan data dummy pengguna agar database profiles bersih murni dari user terdaftar
+  // Pastikan akun Super Admin awal terdaftar di SQLite jika belum ada
   try {
-    db.run(`DELETE FROM profiles WHERE id LIKE 'usr_%' OR id LIKE 'demo_%'`);
-  } catch (_cleanErr) {
+    const existing = db.exec(`SELECT email FROM profiles WHERE email IN ('ahmad.arif@hino.co.id', 'syah.maliqie@hino.co.id')`);
+    const foundEmails = new Set(
+      existing && existing.length > 0 ? existing[0].values.map((v) => String(v[0]).toLowerCase()) : []
+    );
+
+    const initialUsers = [
+      {
+        id: '08cf7fc8-b441-4aa7-a179-23d69b52c252',
+        email: 'ahmad.arif@hino.co.id',
+        role: 'Super Admin',
+        full_name: 'Ahmad Nizar Arif',
+        department: 'Warranty Handling/Jatake',
+      },
+      {
+        id: '19de8fd9-c552-4bb8-b280-34e70c63d363',
+        email: 'syah.maliqie@hino.co.id',
+        role: 'Super Admin',
+        full_name: 'Syah Maliqie',
+        department: 'Warranty Handling/Jatake',
+      },
+    ];
+
+    for (const u of initialUsers) {
+      if (!foundEmails.has(u.email.toLowerCase())) {
+        db.run(
+          `INSERT OR REPLACE INTO profiles (id, email, role, full_name, department, created_at, updated_at) VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+          [u.id, u.email, u.role, u.full_name, u.department]
+        );
+      }
+    }
+  } catch (_seedErr) {
     // ignore
   }
 }
@@ -1076,6 +1106,8 @@ export async function getOpfStats(): Promise<StatsData> {
 
 export async function getAllUserProfiles(): Promise<UserProfile[]> {
   const sb = getSupabaseClient();
+  let supabaseUsers: UserProfile[] = [];
+
   if (isSupabaseConfigured() && sb) {
     try {
       const { data, error } = await sb
@@ -1083,44 +1115,87 @@ export async function getAllUserProfiles(): Promise<UserProfile[]> {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (!error && data && data.length > 0) {
-        // Sinkronkan ke SQLite lokal sebagai cache
-        const db = await getDb();
-        for (const p of data) {
-          db.run(
-            `INSERT OR REPLACE INTO profiles (id, email, role, full_name, department, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [
-              p.id,
-              p.email,
-              p.role || 'Tim Viewer',
-              p.full_name || '',
-              p.department || '',
-              p.created_at || new Date().toISOString(),
-              p.updated_at || new Date().toISOString()
-            ]
-          );
-        }
-        saveDb();
-        return data as UserProfile[];
+      if (!error && Array.isArray(data)) {
+        supabaseUsers = data as UserProfile[];
       }
     } catch (sbErr) {
-      console.warn('[USERS] Gagal mengambil profiles dari Supabase, fallback ke SQLite:', sbErr);
+      console.warn('[USERS] Error membaca profiles dari Supabase:', sbErr);
     }
   }
 
-  // Fallback ke SQLite lokal
   const db = await getDb();
   const res = db.exec('SELECT * FROM profiles ORDER BY created_at DESC');
-  if (!res || res.length === 0) return [];
-
-  const columns = res[0].columns;
-  return res[0].values.map((row) => {
-    const obj: any = {};
-    columns.forEach((col, idx) => {
-      obj[col] = row[idx];
+  let localUsers: UserProfile[] = [];
+  if (res && res.length > 0) {
+    const columns = res[0].columns;
+    localUsers = res[0].values.map((row) => {
+      const obj: any = {};
+      columns.forEach((col, idx) => {
+        obj[col] = row[idx];
+      });
+      return obj as UserProfile;
     });
-    return obj as UserProfile;
-  });
+  }
+
+  // Gabungkan user dari SQLite lokal dan Supabase
+  const userMap = new Map<string, UserProfile>();
+
+  // 1. Masukkan pengguna lokal terlebih dahulu
+  for (const u of localUsers) {
+    if (u.email) userMap.set(u.email.toLowerCase(), u);
+  }
+
+  // 2. Masukkan pengguna Supabase (jika ada data baru/update)
+  for (const su of supabaseUsers) {
+    if (su.email) {
+      userMap.set(su.email.toLowerCase(), su);
+      // Simpan ke SQLite sebagai cache permanen
+      db.run(
+        `INSERT OR REPLACE INTO profiles (id, email, role, full_name, department, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          su.id,
+          su.email.toLowerCase(),
+          su.role || 'Tim Viewer',
+          su.full_name || '',
+          su.department || '',
+          su.created_at || new Date().toISOString(),
+          su.updated_at || new Date().toISOString(),
+        ]
+      );
+    }
+  }
+  saveDb();
+
+  // 3. Jika ada pengguna lokal yang belum ada di Supabase, coba sinkronkan ke Supabase
+  if (isSupabaseConfigured() && sb) {
+    const supabaseEmails = new Set(supabaseUsers.map((u) => u.email.toLowerCase()));
+    for (const lu of localUsers) {
+      if (!supabaseEmails.has(lu.email.toLowerCase())) {
+        const validId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(lu.id)
+          ? lu.id
+          : crypto.randomUUID();
+        sb.from('profiles')
+          .upsert(
+            {
+              id: validId,
+              email: lu.email.toLowerCase(),
+              role: lu.role,
+              full_name: lu.full_name,
+              department: lu.department,
+              updated_at: lu.updated_at || new Date().toISOString(),
+            },
+            { onConflict: 'email' }
+          )
+          .then(({ error }) => {
+            if (!error) {
+              console.log('[USERS] Berhasil sinkronisasi user lokal ke Supabase:', lu.email);
+            }
+          });
+      }
+    }
+  }
+
+  return Array.from(userMap.values());
 }
 
 export async function updateUserProfileRole(
@@ -1133,20 +1208,6 @@ export async function updateUserProfileRole(
   }
 
   const now = new Date().toISOString();
-  const sb = getSupabaseClient();
-
-  if (isSupabaseConfigured() && sb) {
-    try {
-      await sb
-        .from('profiles')
-        .update({ role: newRole, updated_at: now })
-        .eq('id', id);
-    } catch (sbErr) {
-      console.warn('[USER ROLE] Supabase update error:', sbErr);
-    }
-  }
-
-  // Update ke database lokal SQLite
   const db = await getDb();
   db.run(`UPDATE profiles SET role = ?, updated_at = ? WHERE id = ?`, [newRole, now, id]);
   saveDb();
@@ -1162,6 +1223,18 @@ export async function updateUserProfileRole(
     updatedUser = obj;
   }
 
+  const sb = getSupabaseClient();
+  if (isSupabaseConfigured() && sb && updatedUser) {
+    try {
+      await sb
+        .from('profiles')
+        .update({ role: newRole, updated_at: now })
+        .eq('email', updatedUser.email.toLowerCase());
+    } catch (sbErr) {
+      console.warn('[USER ROLE] Supabase update error:', sbErr);
+    }
+  }
+
   return { success: true, user: updatedUser };
 }
 
@@ -1172,32 +1245,46 @@ export async function createUserProfile(
     return { success: false, error: 'Email wajib menggunakan domain resmi @hino.co.id' };
   }
 
-  const id = payload.id || `usr_${Date.now()}`;
+  // Gunakan UUID standar agar kompatibel dengan tipe UUID Supabase
+  const isValidUuid = payload.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.id);
+  const id = isValidUuid ? payload.id! : crypto.randomUUID();
   const role = payload.role || 'Tim Viewer';
   const fullName = payload.full_name || payload.email.split('@')[0];
   const department = payload.department || 'PT Hino Motors Sales Indonesia';
   const now = new Date().toISOString();
 
-  const sb = getSupabaseClient();
-  if (isSupabaseConfigured() && sb) {
-    try {
-      await sb.from('profiles').upsert({
-        id,
-        email: payload.email.toLowerCase(),
-        role,
-        full_name: fullName,
-        department,
-        updated_at: now,
-      });
-    } catch (_e) {}
-  }
-
+  // 1. Simpan ke SQLite lokal terlebih dahulu agar selalu persisten di server
   const db = await getDb();
   db.run(
     `INSERT OR REPLACE INTO profiles (id, email, role, full_name, department, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [id, payload.email.toLowerCase(), role, fullName, department, now, now]
   );
   saveDb();
+
+  // 2. Coba simpan ke Supabase PostgreSQL
+  const sb = getSupabaseClient();
+  if (isSupabaseConfigured() && sb) {
+    try {
+      const { error: sbErr } = await sb.from('profiles').upsert(
+        {
+          id,
+          email: payload.email.toLowerCase(),
+          role,
+          full_name: fullName,
+          department,
+          updated_at: now,
+        },
+        { onConflict: 'email' }
+      );
+      if (sbErr) {
+        console.warn('[USERS] Supabase profile upsert error:', sbErr.message, sbErr.code);
+      } else {
+        console.log('[USERS] Profil pengguna tersimpan di Supabase:', payload.email);
+      }
+    } catch (e: any) {
+      console.warn('[USERS] Exception saat menyimpan profile ke Supabase:', e.message);
+    }
+  }
 
   return {
     success: true,
@@ -1211,6 +1298,27 @@ export async function createUserProfile(
       updated_at: now,
     },
   };
+}
+
+export async function deleteUserProfile(id: string): Promise<{ success: boolean; error?: string }> {
+  const db = await getDb();
+  const res = db.exec(`SELECT email FROM profiles WHERE id = ?`, [id]);
+  let email = '';
+  if (res && res.length > 0 && res[0].values.length > 0) {
+    email = String(res[0].values[0][0]);
+  }
+
+  db.run(`DELETE FROM profiles WHERE id = ?`, [id]);
+  saveDb();
+
+  const sb = getSupabaseClient();
+  if (isSupabaseConfigured() && sb && email) {
+    try {
+      await sb.from('profiles').delete().eq('email', email.toLowerCase());
+    } catch (_e) {}
+  }
+
+  return { success: true };
 }
 
 // ==========================================

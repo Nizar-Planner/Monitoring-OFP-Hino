@@ -9,16 +9,12 @@ import {
   Search,
   CheckCircle2,
   AlertCircle,
-  HelpCircle,
-  Copy,
-  Check,
   X,
   UserPlus,
   RefreshCw,
   Loader2,
   Sliders,
-  ChevronDown,
-  Sparkles
+  ChevronDown
 } from 'lucide-react';
 
 interface UserRoleManagementModalProps {
@@ -46,8 +42,6 @@ export const UserRoleManagementModal: React.FC<UserRoleManagementModalProps> = (
   const [newRole, setNewRole] = useState<UserRole>('Tim Quality');
   const [newDept, setNewDept] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const [showSqlGuide, setShowSqlGuide] = useState(false);
-  const [copiedSql, setCopiedSql] = useState(false);
 
   const fetchUsers = async () => {
     try {
@@ -140,11 +134,6 @@ export const UserRoleManagementModal: React.FC<UserRoleManagementModalProps> = (
     }
   };
 
-  const copySqlScript = () => {
-    navigator.clipboard.writeText(SUPABASE_ROLE_SETUP_SQL);
-    setCopiedSql(true);
-    setTimeout(() => setCopiedSql(false), 3000);
-  };
 
   if (!isOpen) return null;
 
@@ -220,14 +209,6 @@ export const UserRoleManagementModal: React.FC<UserRoleManagementModalProps> = (
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowSqlGuide(!showSqlGuide)}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
-              title="Panduan skema SQL Supabase"
-            >
-              <HelpCircle className="w-4 h-4 text-purple-500" />
-              <span>Panduan SQL Supabase</span>
-            </button>
-            <button
               onClick={onClose}
               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
@@ -259,33 +240,6 @@ export const UserRoleManagementModal: React.FC<UserRoleManagementModalProps> = (
             >
               &times;
             </button>
-          </div>
-        )}
-
-        {/* Collapsible Supabase SQL Guide Drawer */}
-        {showSqlGuide && (
-          <div className="bg-slate-900 border-b border-slate-800 p-4 text-slate-300 text-xs space-y-2.5 animate-fadeIn">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 font-bold text-white text-xs">
-                <Sparkles className="w-4 h-4 text-purple-400" />
-                <span>Langkah-langkah Konfigurasi Tabel `public.profiles` di Supabase</span>
-              </div>
-              <button
-                onClick={copySqlScript}
-                className="flex items-center gap-1 px-2.5 py-1 rounded bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
-              >
-                {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedSql ? 'Tersalin ke Clipboard!' : 'Salin Seluruh SQL'}</span>
-              </button>
-            </div>
-            <ol className="list-decimal list-inside space-y-1 text-[11px] text-slate-300">
-              <li>Buka dashboard Supabase proyek Anda &rarr; klik menu <strong>SQL Editor</strong> di bilah navigasi kiri.</li>
-              <li>Klik tombol <strong>"New query"</strong>, tempel (paste) skrip SQL di bawah ini.</li>
-              <li>Klik tombol hijau <strong>"Run"</strong>. Skrip ini akan membuat tabel <code>profiles</code>, menyetel trigger sinkronisasi otomatis dari <code>auth.users</code>, dan mengizinkan Super Admin mengubah role pengguna.</li>
-            </ol>
-            <pre className="p-3 rounded-xl bg-slate-950 text-emerald-400 font-mono text-[10px] overflow-x-auto max-h-48 border border-slate-800 leading-relaxed">
-              {SUPABASE_ROLE_SETUP_SQL}
-            </pre>
           </div>
         )}
 
@@ -543,71 +497,3 @@ export const UserRoleManagementModal: React.FC<UserRoleManagementModalProps> = (
     </div>
   );
 };
-
-export const SUPABASE_ROLE_SETUP_SQL = `-- ==============================================================================
--- PANDUAN LENGKAP SUPABASE SQL: TABEL PROFILES & ROLE-BASED ACCESS CONTROL (RBAC)
--- Jalankan skrip ini di Supabase Dashboard -> SQL Editor
--- ==============================================================================
-
--- 1. Buat Tabel public.profiles yang terhubung dengan auth.users
-CREATE TABLE IF NOT EXISTS public.profiles (
-  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-  email TEXT NOT NULL UNIQUE,
-  role TEXT NOT NULL DEFAULT 'Tim Viewer' CHECK (role IN ('Super Admin', 'Tim Quality', 'Tim Area', 'Tim Viewer')),
-  full_name TEXT,
-  department TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 2. Aktifkan Row Level Security (RLS)
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-
--- 3. Kebijakan RLS: Siapapun yang login dapat melihat seluruh profil
-DROP POLICY IF EXISTS "Profiles viewable by authenticated users" ON public.profiles;
-CREATE POLICY "Profiles viewable by authenticated users"
-  ON public.profiles FOR SELECT
-  TO authenticated
-  USING (true);
-
--- 4. Kebijakan RLS: Super Admin atau Pengguna Sendiri dapat mengupdate profil
-DROP POLICY IF EXISTS "Users and Super Admin can update profiles" ON public.profiles;
-CREATE POLICY "Users and Super Admin can update profiles"
-  ON public.profiles FOR UPDATE
-  TO authenticated
-  USING (
-    auth.uid() = id OR
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid() AND profiles.role = 'Super Admin'
-    )
-  );
-
--- 5. Trigger Otomatis: Membuat entri di public.profiles saat user baru mendaftar
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO public.profiles (id, email, role, full_name, department)
-  VALUES (
-    NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'role', 'Tim Viewer'),
-    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
-    COALESCE(NEW.raw_user_meta_data->>'department', 'PT Hino Motors Sales Indonesia')
-  )
-  ON CONFLICT (id) DO UPDATE
-  SET email = EXCLUDED.email,
-      role = COALESCE(profiles.role, EXCLUDED.role),
-      full_name = COALESCE(profiles.full_name, EXCLUDED.full_name);
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- 6. Tetapkan akun Super Admin awal Anda (Ganti email dengan email Anda):
--- UPDATE public.profiles SET role = 'Super Admin' WHERE email = 'superadmin@hino.co.id';
-`;

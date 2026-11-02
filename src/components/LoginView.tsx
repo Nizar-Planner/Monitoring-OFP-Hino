@@ -7,9 +7,6 @@ import {
   Mail,
   AlertCircle,
   CheckCircle2,
-  HelpCircle,
-  Copy,
-  Check,
   LogIn,
   UserPlus
 } from 'lucide-react';
@@ -24,8 +21,6 @@ export const LoginView: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSqlGuide, setShowSqlGuide] = useState(false);
-  const [copiedSql, setCopiedSql] = useState(false);
 
   // Validasi live format email kantor @hino.co.id
   const isCorporateEmail = email.trim().toLowerCase().endsWith('@hino.co.id');
@@ -65,12 +60,6 @@ export const LoginView: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const copySqlScript = () => {
-    navigator.clipboard.writeText(SUPABASE_PROFILES_SQL);
-    setCopiedSql(true);
-    setTimeout(() => setCopiedSql(false), 3000);
   };
 
   return (
@@ -131,16 +120,6 @@ export const LoginView: React.FC = () => {
                 Daftar Akun Baru
               </button>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setShowSqlGuide(!showSqlGuide)}
-              className="text-[11px] text-slate-400 hover:text-red-400 flex items-center gap-1 transition-colors cursor-pointer"
-              title="Lihat Skema SQL Tabel Profiles Supabase"
-            >
-              <HelpCircle className="w-3.5 h-3.5" />
-              <span>SQL Profiles</span>
-            </button>
           </div>
 
           {/* Feedback Alerts */}
@@ -264,31 +243,6 @@ export const LoginView: React.FC = () => {
           </form>
         </div>
 
-        {/* Modal / SQL Guide Drawer */}
-        {showSqlGuide && (
-          <div className="mt-4 p-4 rounded-2xl bg-slate-900/90 border border-slate-800 text-slate-300 text-xs space-y-2 animate-fadeIn">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-white flex items-center gap-1.5">
-                <HelpCircle className="w-4 h-4 text-red-400" />
-                Skema Supabase Tabel public.profiles
-              </span>
-              <button
-                onClick={copySqlScript}
-                className="flex items-center gap-1 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-semibold transition-colors cursor-pointer"
-              >
-                {copiedSql ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                <span>{copiedSql ? 'Tersalin!' : 'Salin SQL'}</span>
-              </button>
-            </div>
-            <p className="text-[11px] text-slate-400">
-              Jalankan script ini di <strong>Supabase SQL Editor</strong> untuk membuat tabel profiles yang otomatis sinkron dengan autentikasi pengguna:
-            </p>
-            <pre className="p-2.5 rounded-lg bg-slate-950 font-mono text-[10px] text-emerald-400 overflow-x-auto max-h-40 border border-slate-800">
-              {SUPABASE_PROFILES_SQL}
-            </pre>
-          </div>
-        )}
-
         <div className="mt-6 text-center">
           <p className="text-[11px] text-slate-500 font-medium">
             &copy; {new Date().getFullYear()} PT Hino Motors Sales Indonesia. All rights reserved.
@@ -298,52 +252,3 @@ export const LoginView: React.FC = () => {
     </div>
   );
 };
-
-const SUPABASE_PROFILES_SQL = `-- 1. Buat Tabel public.profiles yang terhubung dengan auth.users
-CREATE TABLE IF NOT EXISTS public.profiles (
-  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-  email TEXT NOT NULL UNIQUE,
-  role TEXT NOT NULL DEFAULT 'Tim Viewer' CHECK (role IN ('Super Admin', 'Tim Quality', 'Tim Area', 'Tim Viewer')),
-  full_name TEXT,
-  department TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 2. Aktifkan Row Level Security (RLS)
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-
--- 3. Kebijakan RLS: Pengguna terautentikasi dapat melihat seluruh profil
-CREATE POLICY "Profiles viewable by authenticated users"
-  ON public.profiles FOR SELECT
-  TO authenticated
-  USING (true);
-
--- 4. Kebijakan RLS: Pengguna dapat mengupdate profil sendiri
-CREATE POLICY "Users can update own profile"
-  ON public.profiles FOR UPDATE
-  TO authenticated
-  USING (auth.uid() = id);
-
--- 5. Trigger Otomatis Pembuatan Profil saat Pengguna Mendaftar
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO public.profiles (id, email, role, full_name)
-  VALUES (
-    NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'role', 'Tim Viewer'),
-    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1))
-  )
-  ON CONFLICT (id) DO UPDATE
-  SET email = EXCLUDED.email,
-      role = COALESCE(EXCLUDED.role, profiles.role);
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();`;
