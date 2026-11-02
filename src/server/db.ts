@@ -392,26 +392,10 @@ function createLocalTables(db: Database): void {
     );
   `);
 
-  // Seed user profil awal kantor Hino jika tabel masih kosong
+  // Bersihkan data dummy pengguna agar database profiles bersih murni dari user terdaftar
   try {
-    const res = db.exec('SELECT COUNT(*) as count FROM profiles');
-    const count = (res && res[0] && res[0].values[0] && res[0].values[0][0]) || 0;
-    if (Number(count) === 0) {
-      const defaultUsers = [
-        { id: 'usr_superadmin', email: 'superadmin@hino.co.id', role: 'Super Admin', name: 'Bambang Sudiro', dept: 'HMSI Central Field Quality' },
-        { id: 'usr_quality_1', email: 'qa.inspector@hino.co.id', role: 'Tim Quality', name: 'Andi Wijaya', dept: 'HMSI Quality Assurance' },
-        { id: 'usr_area_jabodetabek', email: 'area.coordinator@hino.co.id', role: 'Tim Area', name: 'Rahmat Hidayat', dept: 'HMSI Area Coordinator Regional 1' },
-        { id: 'usr_area_surabaya', email: 'area.surabaya@hino.co.id', role: 'Tim Area', name: 'Budi Santoso', dept: 'HMSI Area Coordinator Regional 2' },
-        { id: 'usr_viewer_mgmt', email: 'viewer.management@hino.co.id', role: 'Tim Viewer', name: 'Siti Nurhaliza', dept: 'HMSI Logistics & Management' },
-      ];
-      for (const u of defaultUsers) {
-        db.run(
-          `INSERT OR IGNORE INTO profiles (id, email, role, full_name, department) VALUES (?, ?, ?, ?, ?)`,
-          [u.id, u.email, u.role, u.name, u.dept]
-        );
-      }
-    }
-  } catch (_seedErr) {
+    db.run(`DELETE FROM profiles WHERE id LIKE 'usr_%' OR id LIKE 'demo_%'`);
+  } catch (_cleanErr) {
     // ignore
   }
 }

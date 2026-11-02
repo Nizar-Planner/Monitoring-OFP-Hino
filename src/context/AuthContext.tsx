@@ -12,37 +12,12 @@ interface AuthContextType {
   signUp: (email: string, password?: string, role?: UserRole, fullName?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   switchRole: (role: UserRole) => void;
-  quickDemoLogin: (role: UserRole) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const LOCAL_STORAGE_USER_KEY = 'hino_ofp_auth_user';
 const LOCAL_STORAGE_PROFILE_KEY = 'hino_ofp_auth_profile';
-
-// Akun Demo resmi kantor Hino Indonesia untuk pengujian instan
-export const DEMO_ACCOUNTS: Record<UserRole, { email: string; name: string; department: string }> = {
-  'Super Admin': {
-    email: 'superadmin@hino.co.id',
-    name: 'Bambang Sudiro',
-    department: 'HMSI Central Field Quality & Management',
-  },
-  'Tim Quality': {
-    email: 'qa.inspector@hino.co.id',
-    name: 'Andi Wijaya',
-    department: 'HMSI Quality Assurance & Technical Review',
-  },
-  'Tim Area': {
-    email: 'area.coordinator@hino.co.id',
-    name: 'Rahmat Hidayat',
-    department: 'HMSI Area Coordinator Regional Jabodetabek',
-  },
-  'Tim Viewer': {
-    email: 'viewer.management@hino.co.id',
-    name: 'Siti Nurhaliza',
-    department: 'HMSI Logistics & Management Monitoring',
-  },
-};
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
@@ -118,7 +93,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (savedUserStr && savedProfileStr) {
           const parsedUser = JSON.parse(savedUserStr);
           const parsedProfile = JSON.parse(savedProfileStr);
-          if (isMounted) {
+          // Jika tersimpan akun demo lama, hapus otomatis agar sesi bersih
+          if (parsedUser?.id && (String(parsedUser.id).startsWith('demo_') || String(parsedUser.id).startsWith('usr_'))) {
+            localStorage.removeItem(LOCAL_STORAGE_USER_KEY);
+            localStorage.removeItem(LOCAL_STORAGE_PROFILE_KEY);
+          } else if (isMounted) {
             setUser(parsedUser);
             setProfile(parsedProfile);
           }
@@ -373,24 +352,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // 6. Quick Demo Login untuk 4 Tingkatan Role
-  const quickDemoLogin = (targetRole: UserRole) => {
-    const demo = DEMO_ACCOUNTS[targetRole];
-    const demoUser = { id: `demo_${targetRole.toLowerCase().replace(/\s+/g, '_')}`, email: demo.email };
-    const demoProfile: UserProfile = {
-      id: demoUser.id,
-      email: demo.email,
-      role: targetRole,
-      full_name: demo.name,
-      department: demo.department,
-    };
-
-    setUser(demoUser);
-    setProfile(demoProfile);
-    localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(demoUser));
-    localStorage.setItem(LOCAL_STORAGE_PROFILE_KEY, JSON.stringify(demoProfile));
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -403,7 +364,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         signUp,
         logout,
         switchRole,
-        quickDemoLogin,
       }}
     >
       {children}
