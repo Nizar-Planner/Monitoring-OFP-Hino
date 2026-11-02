@@ -11,6 +11,8 @@ import { ActionVerificationModal } from './components/ActionVerificationModal';
 import { ExcelUploadModal } from './components/ExcelUploadModal';
 import { PrintTagView } from './components/PrintTagView';
 import { RollbackModal } from './components/RollbackModal';
+import { UserRoleManagementModal } from './components/UserRoleManagementModal';
+import { AreaNotificationModal } from './components/AreaNotificationModal';
 import { OpfRecord, StatsData, ExcelImportResult } from './types';
 import { Truck, AlertTriangle, CheckCircle2, FileSpreadsheet, Clock, ShieldCheck, Building, Loader2 } from 'lucide-react';
 
@@ -56,6 +58,8 @@ function DashboardApp() {
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [isPrintTagOpen, setIsPrintTagOpen] = useState(false);
   const [tagsToPrint, setTagsToPrint] = useState<OpfRecord[]>([]);
+  const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
+  const [isAreaNotificationOpen, setIsAreaNotificationOpen] = useState(false);
 
   // Toast Notification
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' | 'warning' } | null>(null);
@@ -201,6 +205,15 @@ function DashboardApp() {
       <Header
         onOpenUploadExcel={() => setIsUploadExcelOpen(true)}
         onOpenManualEntry={() => setIsManualModalOpen(true)}
+        onOpenUserManagement={() => setIsUserManagementOpen(true)}
+        onOpenAreaNotification={() => setIsAreaNotificationOpen(true)}
+        pendingAreaCount={
+          stats?.statusCounts?.waitingOfp ??
+          records.filter((r) => {
+            const status = (r.tracking_status || '').toLowerCase();
+            return !r.area_received_date || status === 'waiting ofp' || status === 'belum terkirim';
+          }).length
+        }
         activeStatusFilter={statusFilter}
         isSupabaseActive={isSupabaseActive}
         isDarkMode={isDarkMode}
@@ -404,6 +417,22 @@ function DashboardApp() {
           showToast('Part berhasil di-rollback ke Tim Area dengan catatan revisi.', 'warning');
           await fetchData();
         }}
+      />
+
+      {/* MODAL 7: User & Role Management Modal (Super Admin) */}
+      <UserRoleManagementModal
+        isOpen={isUserManagementOpen}
+        onClose={() => setIsUserManagementOpen(false)}
+        currentUserEmail={user?.email}
+        onUserRoleUpdated={fetchData}
+      />
+
+      {/* MODAL 8: Area Notification Modal (Tim Quality & Super Admin) */}
+      <AreaNotificationModal
+        isOpen={isAreaNotificationOpen}
+        onClose={() => setIsAreaNotificationOpen(false)}
+        currentUserRole={role}
+        currentUserName={profile?.full_name || user?.email?.split('@')[0] || 'Tim Quality'}
       />
 
     </div>

@@ -12,7 +12,9 @@ import {
   Building,
   Eye,
   ChevronDown,
-  Lock
+  Lock,
+  Mail,
+  Users
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
@@ -20,6 +22,9 @@ import { UserRole } from '../types';
 interface HeaderProps {
   onOpenUploadExcel: () => void;
   onOpenManualEntry: () => void;
+  onOpenUserManagement?: () => void;
+  onOpenAreaNotification?: () => void;
+  pendingAreaCount?: number;
   activeStatusFilter: string;
   setActiveStatusFilter: (status: string) => void;
   isSupabaseActive?: boolean;
@@ -30,6 +35,9 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   onOpenUploadExcel,
   onOpenManualEntry,
+  onOpenUserManagement,
+  onOpenAreaNotification,
+  pendingAreaCount,
   activeStatusFilter,
   setActiveStatusFilter,
   isSupabaseActive = false,
@@ -210,6 +218,46 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 </div>
 
+                {/* Special Admin & Quality Action Shortcuts in Dropdown */}
+                {(permissions.canManageUsers || permissions.canSendAreaNotification) && (
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      Menu Khusus Wewenang
+                    </span>
+                    {permissions.canManageUsers && onOpenUserManagement && (
+                      <button
+                        onClick={() => {
+                          setIsRoleDropdownOpen(false);
+                          onOpenUserManagement();
+                        }}
+                        className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors cursor-pointer"
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                        <span>Kelola Pengguna &amp; Peran</span>
+                      </button>
+                    )}
+                    {permissions.canSendAreaNotification && onOpenAreaNotification && (
+                      <button
+                        onClick={() => {
+                          setIsRoleDropdownOpen(false);
+                          onOpenAreaNotification();
+                        }}
+                        className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-3.5 h-3.5" />
+                          <span>Pemberitahuan Tim Area</span>
+                        </div>
+                        {pendingAreaCount !== undefined && pendingAreaCount > 0 && (
+                          <span className="text-[10px] font-black bg-amber-600 text-white px-1.5 py-0.2 rounded-full">
+                            {pendingAreaCount}
+                          </span>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 {/* Sign Out Button */}
                 <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
                   <button
@@ -249,6 +297,45 @@ export const Header: React.FC<HeaderProps> = ({
             <span>Template Excel</span>
           </a>
 
+          {/* Export CSV (Available for all roles including Tim Viewer) */}
+          <a
+            href="/api/export/csv"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors whitespace-nowrap"
+            title="Download seluruh data dalam format CSV untuk Excel"
+          >
+            <Download className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+            <span className="hidden md:inline">Export CSV</span>
+          </a>
+
+          {/* Pemberitahuan Tim Area (Tim Quality & Super Admin) */}
+          {permissions.canSendAreaNotification && onOpenAreaNotification && (
+            <button
+              onClick={onOpenAreaNotification}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-100/80 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-800/80 hover:bg-amber-200/80 dark:hover:bg-amber-900/60 active:scale-95 rounded-lg transition-all shadow-xs whitespace-nowrap cursor-pointer"
+              title="Kirim pengingat penyerahan fisik part ke email Tim Area"
+            >
+              <Mail className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <span className="hidden md:inline">Notif Area</span>
+              {pendingAreaCount !== undefined && pendingAreaCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-amber-600 text-white animate-pulse">
+                  {pendingAreaCount}
+                </span>
+              )}
+            </button>
+          )}
+
+          {/* Kelola User & Role (Super Admin Only) */}
+          {permissions.canManageUsers && onOpenUserManagement && (
+            <button
+              onClick={onOpenUserManagement}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-xs font-bold text-purple-800 dark:text-purple-300 bg-purple-100/80 dark:bg-purple-950/70 border border-purple-300 dark:border-purple-800/80 hover:bg-purple-200/80 dark:hover:bg-purple-900/60 active:scale-95 rounded-lg transition-all shadow-xs whitespace-nowrap cursor-pointer"
+              title="Khusus Super Admin: Atur peran dan hak akses pengguna"
+            >
+              <Users className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+              <span className="hidden md:inline">Kelola User</span>
+            </button>
+          )}
+
           {/* Manual Input DTR (Role Protected: Hidden for Tim Viewer) */}
           {permissions.canCreateManual && (
             <button
@@ -260,16 +347,6 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="hidden sm:inline">Input DTR</span>
             </button>
           )}
-
-          {/* Export CSV (Available for all roles including Tim Viewer) */}
-          <a
-            href="/api/export/csv"
-            className="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors whitespace-nowrap"
-            title="Download seluruh data dalam format CSV untuk Excel"
-          >
-            <Download className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-            <span className="hidden md:inline">Export CSV</span>
-          </a>
 
           {/* Upload Excel Button (Role Protected: Only for Super Admin) */}
           {permissions.canUploadExcel && (

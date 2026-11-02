@@ -25,7 +25,15 @@ import {
   isUsingSupabase,
   saveDb,
   getSupabaseColumns,
-  OpfRecord
+  OpfRecord,
+  UserProfile,
+  UserRole,
+  getAllUserProfiles,
+  updateUserProfileRole,
+  createUserProfile,
+  getAreaPendingOfpSummary,
+  logNotification,
+  getNotificationHistory
 } from './src/server/db.js';
 import { parseAndImportExcel, generateExcelTemplate } from './src/server/excel.js';
 import {
@@ -520,6 +528,125 @@ app.get('/api/export/csv', async (_req, res) => {
   } catch (error) {
     console.error('Error exporting CSV:', error);
     res.status(500).send('Gagal mengekspor CSV');
+  }
+});
+
+// 13. User & Role Management (Super Admin)
+app.get('/api/users', async (_req, res) => {
+  try {
+    const profiles = await getAllUserProfiles();
+    res.json({ success: true, data: profiles, count: profiles.length });
+  } catch (error: any) {
+    console.error('Error fetching user profiles:', error);
+    res.status(500).json({ success: false, error: 'Gagal mengambil data profil pengguna.' });
+  }
+});
+
+app.put('/api/users/:id/role', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { role } = req.body;
+    if (!role) {
+      return res.status(400).json({ success: false, error: 'Role pengguna wajib ditentukan.' });
+    }
+
+    const result = await updateUserProfileRole(id, role as UserRole);
+    if (!result.success) {
+      return res.status(400).json({ success: false, error: result.error || 'Gagal mengubah role pengguna.' });
+    }
+
+    res.json({
+      success: true,
+      message: `Peran pengguna berhasil diperbarui menjadi "${role}".`,
+      user: result.user,
+    });
+  } catch (error: any) {
+    console.error('Error updating user role:', error);
+    res.status(500).json({ success: false, error: error.message || 'Gagal memperbarui peran pengguna.' });
+  }
+});
+
+app.post('/api/users', async (req, res) => {
+  try {
+    const { email, role, full_name, department } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Email kantor wajib diisi.' });
+    }
+
+    const result = await createUserProfile({ email, role, full_name, department });
+    if (!result.success) {
+      return res.status(400).json({ success: false, error: result.error });
+    }
+
+    res.json({
+      success: true,
+      message: 'Pengguna berhasil ditambahkan.',
+      user: result.user,
+    });
+  } catch (error: any) {
+    console.error('Error creating user profile:', error);
+    res.status(500).json({ success: false, error: error.message || 'Gagal menambahkan profil pengguna.' });
+  }
+});
+
+// 14. Area Notification (Tim Quality & Super Admin)
+app.get('/api/notifications/area-pending', async (_req, res) => {
+  try {
+    const summary = await getAreaPendingOfpSummary();
+    res.json({ success: true, data: summary });
+  } catch (error: any) {
+    console.error('Error fetching area pending summary:', error);
+    res.status(500).json({ success: false, error: 'Gagal menghitung ringkasan OFP pending Tim Area.' });
+  }
+});
+
+app.post('/api/notifications/send-area-reminder', async (req, res) => {
+  try {
+    const { sent_by, recipients, custom_notes } = req.body;
+    const summary = await getAreaPendingOfpSummary();
+
+    const targetRecipients = Array.isArray(recipients) && recipients.length > 0
+      ? recipients
+      : summary.areaRecipients.map((u) => u.email).filter(Boolean);
+
+    if (targetRecipients.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Tidak ditemukan alamat email Tim Area yang terdaftar. Tambahkan email penerima terlebih dahulu.'
+      });
+    }
+
+    await logNotification({
+      sent_by: sent_by || 'Tim Quality / Super Admin',
+      recipients: targetRecipients,
+      pending_count: summary.totalPending,
+      overdue_count: summary.overdueCount,
+      notes: custom_notes || '',
+    });
+
+    res.json({
+      success: true,
+      message: `Pemberitahuan berhasil dikirimkan ke ${targetRecipients.length} personel Tim Area terkait ${summary.totalPending} part OFP pending.`,
+      dispatch: {
+        sent_at: new Date().toISOString(),
+        recipients: targetRecipients,
+        total_pending: summary.totalPending,
+        overdue_count: summary.overdueCount,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error sending area reminder notification:', error);
+    res.status(500).json({ success: false, error: error.message || 'Gagal mengirimkan notifikasi pengingat.' });
+  }
+});
+
+app.get('/api/notifications/history', async (_req, res) => {
+  try {
+    const history = await getNotificationHistory(30);
+    res.json({ success: true, data: history });
+  } catch (error: any) {
+    console.error('Error fetching notification history:', error);
+    res.status(500).json({ success: false, error: 'Gagal memuat riwayat notifikasi.' });
   }
 });
 

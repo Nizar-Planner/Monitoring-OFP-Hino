@@ -29,6 +29,8 @@ export interface RolePermissions {
   canCreateManual: boolean;      // Tim Area, Tim Quality, Super Admin: input DTR baru
   canDelete: boolean;            // Super Admin: hapus record
   canExport: boolean;            // Semua role (termasuk Tim Viewer): ekspor CSV & Print Tag
+  canManageUsers: boolean;       // Super Admin only: kelola pengguna dan penetapan role
+  canSendAreaNotification: boolean; // Super Admin & Tim Quality: kirim email pengingat OFP ke Tim Area
   isReadOnly: boolean;           // Tim Viewer: read-only
 }
 
@@ -44,6 +46,8 @@ export function getRolePermissions(role: UserRole): RolePermissions {
         canCreateManual: true,
         canDelete: true,
         canExport: true,
+        canManageUsers: true,
+        canSendAreaNotification: true,
         isReadOnly: false,
       };
     case 'Tim Quality':
@@ -56,6 +60,8 @@ export function getRolePermissions(role: UserRole): RolePermissions {
         canCreateManual: true,
         canDelete: false,
         canExport: true,
+        canManageUsers: false,
+        canSendAreaNotification: true,
         isReadOnly: false,
       };
     case 'Tim Area':
@@ -68,6 +74,8 @@ export function getRolePermissions(role: UserRole): RolePermissions {
         canCreateManual: true,
         canDelete: false,
         canExport: true,
+        canManageUsers: false,
+        canSendAreaNotification: false,
         isReadOnly: false,
       };
     case 'Tim Viewer':
@@ -81,6 +89,8 @@ export function getRolePermissions(role: UserRole): RolePermissions {
         canCreateManual: false,
         canDelete: false,
         canExport: true,
+        canManageUsers: false,
+        canSendAreaNotification: false,
         isReadOnly: true,
       };
   }

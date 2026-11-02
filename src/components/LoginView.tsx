@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
-import { useAuth, DEMO_ACCOUNTS } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
 import {
   Truck,
-  ShieldCheck,
-  Building,
-  Eye,
   Lock,
   Mail,
   AlertCircle,
@@ -18,7 +15,7 @@ import {
 } from 'lucide-react';
 
 export const LoginView: React.FC = () => {
-  const { login, signUp, quickDemoLogin, isLoading } = useAuth();
+  const { login, signUp, isLoading } = useAuth();
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -265,62 +262,6 @@ export const LoginView: React.FC = () => {
               )}
             </button>
           </form>
-
-          {/* Quick Demo Access Buttons for 4 Roles */}
-          <div className="pt-2 border-t border-slate-800 space-y-2">
-            <span className="text-[11px] font-bold text-slate-400 block text-center uppercase tracking-wider">
-              Mode Uji Coba Cepat (1-Klik Masuk Sesuai Role)
-            </span>
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <button
-                type="button"
-                onClick={() => quickDemoLogin('Super Admin')}
-                className="p-2.5 rounded-xl bg-purple-950/40 hover:bg-purple-900/60 border border-purple-800/50 text-purple-200 flex flex-col items-start gap-0.5 transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-1.5 font-bold">
-                  <ShieldCheck className="w-3.5 h-3.5 text-purple-400 group-hover:scale-110 transition-transform" />
-                  <span>Super Admin</span>
-                </div>
-                <span className="text-[10px] text-purple-400/80">Akses Penuh</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => quickDemoLogin('Tim Quality')}
-                className="p-2.5 rounded-xl bg-blue-950/40 hover:bg-blue-900/60 border border-blue-800/50 text-blue-200 flex flex-col items-start gap-0.5 transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-1.5 font-bold">
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-400 group-hover:scale-110 transition-transform" />
-                  <span>Tim Quality</span>
-                </div>
-                <span className="text-[10px] text-blue-400/80">Verifikasi &amp; Rollback</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => quickDemoLogin('Tim Area')}
-                className="p-2.5 rounded-xl bg-amber-950/40 hover:bg-amber-900/60 border border-amber-800/50 text-amber-200 flex flex-col items-start gap-0.5 transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-1.5 font-bold">
-                  <Building className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
-                  <span>Tim Area</span>
-                </div>
-                <span className="text-[10px] text-amber-400/80">Area Verified</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => quickDemoLogin('Tim Viewer')}
-                className="p-2.5 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700 text-slate-200 flex flex-col items-start gap-0.5 transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-1.5 font-bold">
-                  <Eye className="w-3.5 h-3.5 text-slate-400 group-hover:scale-110 transition-transform" />
-                  <span>Tim Viewer</span>
-                </div>
-                <span className="text-[10px] text-slate-400">Hanya Lihat</span>
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Modal / SQL Guide Drawer */}

@@ -149,3 +149,66 @@ BEGIN
     CREATE POLICY "Public Upload for opf-attachments" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'opf-attachments');
   END IF;
 END $$;
+
+-- ==============================================================================
+-- 6. Tabel Manajemen Profil Pengguna & Role-Based Access Control (RBAC)
+-- ==============================================================================
+
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  role TEXT NOT NULL DEFAULT 'Tim Viewer' CHECK (role IN ('Super Admin', 'Tim Quality', 'Tim Area', 'Tim Viewer')),
+  full_name TEXT,
+  department TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Aktifkan Row Level Security (RLS)
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+-- Kebijakan RLS: Pengguna terautentikasi dapat melihat seluruh profil
+DROP POLICY IF EXISTS "Profiles viewable by authenticated users" ON public.profiles;
+CREATE POLICY "Profiles viewable by authenticated users"
+  ON public.profiles FOR SELECT
+  TO authenticated
+  USING (true);
+
+-- Kebijakan RLS: Super Admin atau Pengguna Sendiri dapat mengupdate profil
+DROP POLICY IF EXISTS "Users and Super Admin can update profiles" ON public.profiles;
+CREATE POLICY "Users and Super Admin can update profiles"
+  ON public.profiles FOR UPDATE
+  TO authenticated
+  USING (
+    auth.uid() = id OR
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'Super Admin'
+    )
+  );
+
+-- Trigger Otomatis: Membuat entri di public.profiles saat user baru mendaftar di auth.users
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, role, full_name, department)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'role', 'Tim Viewer'),
+    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
+    COALESCE(NEW.raw_user_meta_data->>'department', 'PT Hino Motors Sales Indonesia')
+  )
+  ON CONFLICT (id) DO UPDATE
+  SET email = EXCLUDED.email,
+      role = COALESCE(profiles.role, EXCLUDED.role),
+      full_name = COALESCE(profiles.full_name, EXCLUDED.full_name);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+

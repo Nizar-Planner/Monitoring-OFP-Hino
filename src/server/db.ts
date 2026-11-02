@@ -1,7 +1,7 @@
 import initSqlJs, { Database, SqlValue } from 'sql.js';
 import fs from 'fs';
 import path from 'path';
-import { OpfRecord, StatsData, TrackingStatus, ExcelImportResult } from '../types.ts';
+import { OpfRecord, StatsData, TrackingStatus, ExcelImportResult, UserProfile, UserRole } from '../types.ts';
 import {
   getSupabaseClient,
   isSupabaseConfigured,
@@ -10,7 +10,7 @@ import {
 } from '../lib/supabase.ts';
 import { isExcludedJudgement, EXCLUDED_JUDGEMENTS } from '../utils/excelParser.ts';
 
-export type { OpfRecord, StatsData, TrackingStatus, ExcelImportResult };
+export type { OpfRecord, StatsData, TrackingStatus, ExcelImportResult, UserProfile, UserRole };
 export { isExcludedJudgement, EXCLUDED_JUDGEMENTS };
 
 let dbInstance: Database | null = null;
@@ -365,6 +365,55 @@ function createLocalTables(db: Database): void {
 
   db.run(`CREATE INDEX IF NOT EXISTS idx_dtr_part ON opf_records (dtr_number, part_name);`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_dtr_part_no ON opf_records (dtr_number, part_number);`);
+
+  // Tabel Manajemen Profil Pengguna & RBAC
+  db.run(`
+    CREATE TABLE IF NOT EXISTS profiles (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL UNIQUE,
+      role TEXT NOT NULL DEFAULT 'Tim Viewer',
+      full_name TEXT DEFAULT '',
+      department TEXT DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  // Tabel Riwayat Log Notifikasi Email ke Tim Area
+  db.run(`
+    CREATE TABLE IF NOT EXISTS notification_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sent_by TEXT NOT NULL,
+      recipients TEXT NOT NULL,
+      pending_count INTEGER NOT NULL DEFAULT 0,
+      overdue_count INTEGER NOT NULL DEFAULT 0,
+      notes TEXT DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  // Seed user profil awal kantor Hino jika tabel masih kosong
+  try {
+    const res = db.exec('SELECT COUNT(*) as count FROM profiles');
+    const count = (res && res[0] && res[0].values[0] && res[0].values[0][0]) || 0;
+    if (Number(count) === 0) {
+      const defaultUsers = [
+        { id: 'usr_superadmin', email: 'superadmin@hino.co.id', role: 'Super Admin', name: 'Bambang Sudiro', dept: 'HMSI Central Field Quality' },
+        { id: 'usr_quality_1', email: 'qa.inspector@hino.co.id', role: 'Tim Quality', name: 'Andi Wijaya', dept: 'HMSI Quality Assurance' },
+        { id: 'usr_area_jabodetabek', email: 'area.coordinator@hino.co.id', role: 'Tim Area', name: 'Rahmat Hidayat', dept: 'HMSI Area Coordinator Regional 1' },
+        { id: 'usr_area_surabaya', email: 'area.surabaya@hino.co.id', role: 'Tim Area', name: 'Budi Santoso', dept: 'HMSI Area Coordinator Regional 2' },
+        { id: 'usr_viewer_mgmt', email: 'viewer.management@hino.co.id', role: 'Tim Viewer', name: 'Siti Nurhaliza', dept: 'HMSI Logistics & Management' },
+      ];
+      for (const u of defaultUsers) {
+        db.run(
+          `INSERT OR IGNORE INTO profiles (id, email, role, full_name, department) VALUES (?, ?, ?, ?, ?)`,
+          [u.id, u.email, u.role, u.name, u.dept]
+        );
+      }
+    }
+  } catch (_seedErr) {
+    // ignore
+  }
 }
 
 export async function getAllOpfRecords(query = '', statusFilter = 'all', overdueOnly = false): Promise<OpfRecord[]> {
@@ -1036,3 +1085,215 @@ export async function getOpfStats(): Promise<StatsData> {
     pendingQualityVerificationCount,
   };
 }
+
+// ==========================================
+// User & Role Management Functions
+// ==========================================
+
+export async function getAllUserProfiles(): Promise<UserProfile[]> {
+  const sb = getSupabaseClient();
+  if (isSupabaseConfigured() && sb) {
+    try {
+      const { data, error } = await sb
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        // Sinkronkan ke SQLite lokal sebagai cache
+        const db = await getDb();
+        for (const p of data) {
+          db.run(
+            `INSERT OR REPLACE INTO profiles (id, email, role, full_name, department, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+              p.id,
+              p.email,
+              p.role || 'Tim Viewer',
+              p.full_name || '',
+              p.department || '',
+              p.created_at || new Date().toISOString(),
+              p.updated_at || new Date().toISOString()
+            ]
+          );
+        }
+        saveDb();
+        return data as UserProfile[];
+      }
+    } catch (sbErr) {
+      console.warn('[USERS] Gagal mengambil profiles dari Supabase, fallback ke SQLite:', sbErr);
+    }
+  }
+
+  // Fallback ke SQLite lokal
+  const db = await getDb();
+  const res = db.exec('SELECT * FROM profiles ORDER BY created_at DESC');
+  if (!res || res.length === 0) return [];
+
+  const columns = res[0].columns;
+  return res[0].values.map((row) => {
+    const obj: any = {};
+    columns.forEach((col, idx) => {
+      obj[col] = row[idx];
+    });
+    return obj as UserProfile;
+  });
+}
+
+export async function updateUserProfileRole(
+  id: string,
+  newRole: UserRole
+): Promise<{ success: boolean; user?: UserProfile; error?: string }> {
+  const validRoles: UserRole[] = ['Super Admin', 'Tim Quality', 'Tim Area', 'Tim Viewer'];
+  if (!validRoles.includes(newRole)) {
+    return { success: false, error: `Role tidak valid. Pilihan: ${validRoles.join(', ')}` };
+  }
+
+  const now = new Date().toISOString();
+  const sb = getSupabaseClient();
+
+  if (isSupabaseConfigured() && sb) {
+    try {
+      await sb
+        .from('profiles')
+        .update({ role: newRole, updated_at: now })
+        .eq('id', id);
+    } catch (sbErr) {
+      console.warn('[USER ROLE] Supabase update error:', sbErr);
+    }
+  }
+
+  // Update ke database lokal SQLite
+  const db = await getDb();
+  db.run(`UPDATE profiles SET role = ?, updated_at = ? WHERE id = ?`, [newRole, now, id]);
+  saveDb();
+
+  // Ambil record terbaru
+  const res = db.exec(`SELECT * FROM profiles WHERE id = ?`, [id]);
+  let updatedUser: UserProfile | undefined = undefined;
+  if (res && res.length > 0 && res[0].values.length > 0) {
+    const cols = res[0].columns;
+    const row = res[0].values[0];
+    const obj: any = {};
+    cols.forEach((c, idx) => (obj[c] = row[idx]));
+    updatedUser = obj;
+  }
+
+  return { success: true, user: updatedUser };
+}
+
+export async function createUserProfile(
+  payload: Partial<UserProfile>
+): Promise<{ success: boolean; user?: UserProfile; error?: string }> {
+  if (!payload.email || !payload.email.includes('@hino.co.id')) {
+    return { success: false, error: 'Email wajib menggunakan domain resmi @hino.co.id' };
+  }
+
+  const id = payload.id || `usr_${Date.now()}`;
+  const role = payload.role || 'Tim Viewer';
+  const fullName = payload.full_name || payload.email.split('@')[0];
+  const department = payload.department || 'PT Hino Motors Sales Indonesia';
+  const now = new Date().toISOString();
+
+  const sb = getSupabaseClient();
+  if (isSupabaseConfigured() && sb) {
+    try {
+      await sb.from('profiles').upsert({
+        id,
+        email: payload.email.toLowerCase(),
+        role,
+        full_name: fullName,
+        department,
+        updated_at: now,
+      });
+    } catch (_e) {}
+  }
+
+  const db = await getDb();
+  db.run(
+    `INSERT OR REPLACE INTO profiles (id, email, role, full_name, department, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [id, payload.email.toLowerCase(), role, fullName, department, now, now]
+  );
+  saveDb();
+
+  return {
+    success: true,
+    user: {
+      id,
+      email: payload.email.toLowerCase(),
+      role,
+      full_name: fullName,
+      department,
+      created_at: now,
+      updated_at: now,
+    },
+  };
+}
+
+// ==========================================
+// Area Notification Functions
+// ==========================================
+
+export async function getAreaPendingOfpSummary(): Promise<{
+  totalPending: number;
+  overdueCount: number;
+  pendingRecords: OpfRecord[];
+  areaRecipients: UserProfile[];
+}> {
+  // Ambil seluruh record yang belum diterima di Area (area_received_date IS NULL atau status Waiting OFP / Belum Terkirim)
+  const allRecords = await getAllOpfRecords();
+  const pendingRecords = allRecords.filter((r) => {
+    const status = (r.tracking_status || '').toLowerCase();
+    const hasAreaReceipt = Boolean(r.area_received_date);
+    return !hasAreaReceipt || status === 'waiting ofp' || status === 'belum terkirim';
+  });
+
+  const overdueCount = pendingRecords.filter((r) => r.is_overdue).length;
+
+  // Ambil user yang berstatus 'Tim Area'
+  const allProfiles = await getAllUserProfiles();
+  const areaRecipients = allProfiles.filter((p) => p.role === 'Tim Area');
+
+  return {
+    totalPending: pendingRecords.length,
+    overdueCount,
+    pendingRecords,
+    areaRecipients,
+  };
+}
+
+export async function logNotification(entry: {
+  sent_by: string;
+  recipients: string[];
+  pending_count: number;
+  overdue_count: number;
+  notes?: string;
+}): Promise<void> {
+  const db = await getDb();
+  db.run(
+    `INSERT INTO notification_logs (sent_by, recipients, pending_count, overdue_count, notes) VALUES (?, ?, ?, ?, ?)`,
+    [
+      entry.sent_by,
+      entry.recipients.join(', '),
+      entry.pending_count,
+      entry.overdue_count,
+      entry.notes || '',
+    ]
+  );
+  saveDb();
+}
+
+export async function getNotificationHistory(limit = 20): Promise<any[]> {
+  const db = await getDb();
+  const res = db.exec(`SELECT * FROM notification_logs ORDER BY created_at DESC LIMIT ${limit}`);
+  if (!res || res.length === 0) return [];
+
+  const columns = res[0].columns;
+  return res[0].values.map((row) => {
+    const obj: any = {};
+    columns.forEach((col, idx) => {
+      obj[col] = row[idx];
+    });
+    return obj;
+  });
+}
+
