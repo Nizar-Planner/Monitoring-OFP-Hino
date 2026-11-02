@@ -106,6 +106,148 @@ export async function syncRecordToSupabase(record: OpfRecord, days: number, isOv
   }
 }
 
+/**
+ * Robust batch synchronization to Supabase:
+ * 1. Deduplicates records in the chunk to prevent Postgres "ON CONFLICT DO UPDATE command cannot affect row a second time"
+ * 2. Filters fields against actual columns existing in the Supabase schema
+ * 3. Attempts fast composite-key upsert (dtr_number, part_name)
+ * 4. Gracefully falls back to (dtr_number, part_name, part_number) or ID-matched update/insert if no unique constraint matches
+ */
+export async function syncBatchToSupabase(records: OpfRecord[]): Promise<{ success: boolean; errors: string[] }> {
+  const sb = getSupabaseClient();
+  if (!isSupabaseConfigured() || !sb) return { success: true, errors: [] };
+
+  const validRecords = records.filter((r) => !isExcludedJudgement(r.judgement_qpi));
+  if (validRecords.length === 0) return { success: true, errors: [] };
+
+  const errors: string[] = [];
+
+  try {
+    const cols = await getSupabaseColumns();
+
+    // 1. Deduplikasi record dalam batch berdasarkan (dtr_number, part_name)
+    // agar PostgreSQL tidak melempar error "ON CONFLICT DO UPDATE command cannot affect row a second time"
+    const recordMap = new Map<string, Record<string, any>>();
+    for (const r of validRecords) {
+      const days = calculateDaysElapsed(r.request_date, r.shipped_date);
+      const isOverdue = days > 30 && r.tracking_status !== 'Delivered' && r.tracking_status !== 'Sent to HMMI';
+      const { id: _id, ...rest } = r;
+
+      const rawPayload = {
+        ...rest,
+        days_elapsed: days,
+        is_overdue: isOverdue,
+        updated_at: new Date().toISOString(),
+      };
+      const filtered = filterRecordForSupabase(rawPayload, cols);
+      
+      const key = `${String(r.dtr_number || '').trim().toUpperCase()}:::${String(r.part_name || '').trim().toLowerCase()}`;
+      recordMap.set(key, filtered);
+    }
+
+    const payloadList = Array.from(recordMap.values());
+    const chunkSize = 100;
+
+    for (let i = 0; i < payloadList.length; i += chunkSize) {
+      const chunk = payloadList.slice(i, i + chunkSize);
+
+      // Coba Cara 1: Upsert dengan onConflict: 'dtr_number,part_name'
+      let upsertSuccess = false;
+      let lastErrMessage = '';
+
+      try {
+        const { error: upsertErr1 } = await sb
+          .from('opf_records')
+          .upsert(chunk, { onConflict: 'dtr_number,part_name' });
+
+        if (!upsertErr1) {
+          upsertSuccess = true;
+        } else {
+          lastErrMessage = upsertErr1.message;
+          // Coba Cara 2: Jika error constraint, coba dengan 'dtr_number,part_name,part_number'
+          if (upsertErr1.message.includes('unique or exclusion constraint')) {
+            const { error: upsertErr2 } = await sb
+              .from('opf_records')
+              .upsert(chunk, { onConflict: 'dtr_number,part_name,part_number' });
+            if (!upsertErr2) {
+              upsertSuccess = true;
+            } else {
+              lastErrMessage = upsertErr2.message;
+            }
+          }
+        }
+      } catch (e: any) {
+        lastErrMessage = e.message || String(e);
+      }
+
+      // Cara 3: FALLBACK HANDLER JIKA ON CONFLICT GAGAL ATAU TIDAK ADA UNIQUE CONSTRAINT DI SUPABASE:
+      // Cocokkan data yang sudah ada berdasarkan dtr_number, dapatkan ID Supabase,
+      // lalu lakukan UPDATE untuk yang sudah ada dan INSERT untuk data baru.
+      if (!upsertSuccess) {
+        console.warn(`[SUPABASE SYNC] Upsert constraint tidak cocok (${lastErrMessage}). Menggunakan fallback ID-matching...`);
+        try {
+          const chunkDtrs = Array.from(new Set(chunk.map((item) => item.dtr_number).filter(Boolean)));
+          
+          // Cari record yang sudah ada di Supabase
+          const { data: existingRows } = await sb
+            .from('opf_records')
+            .select('id, dtr_number, part_name, part_number')
+            .in('dtr_number', chunkDtrs);
+
+          const existingMap = new Map<string, number>();
+          if (existingRows) {
+            for (const row of existingRows) {
+              const k = `${String(row.dtr_number).trim().toUpperCase()}:::${String(row.part_name).trim().toLowerCase()}`;
+              existingMap.set(k, row.id);
+            }
+          }
+
+          const toUpdate: Array<{ id: number; data: Record<string, any> }> = [];
+          const toInsert: Record<string, any>[] = [];
+
+          for (const item of chunk) {
+            const k = `${String(item.dtr_number).trim().toUpperCase()}:::${String(item.part_name).trim().toLowerCase()}`;
+            const existingId = existingMap.get(k);
+            if (existingId) {
+              toUpdate.push({ id: existingId, data: item });
+            } else {
+              toInsert.push(item);
+            }
+          }
+
+          // Lakukan insert untuk data baru
+          if (toInsert.length > 0) {
+            const { error: insErr } = await sb.from('opf_records').insert(toInsert);
+            if (insErr) {
+              console.error('[SUPABASE SYNC] Fallback insert error:', insErr.message);
+              errors.push(`Supabase Insert Error: ${insErr.message}`);
+            }
+          }
+
+          // Lakukan update untuk data yang sudah ada
+          for (const u of toUpdate) {
+            const { error: updErr } = await sb.from('opf_records').update(u.data).eq('id', u.id);
+            if (updErr) {
+              console.error(`[SUPABASE SYNC] Fallback update error (id: ${u.id}):`, updErr.message);
+            }
+          }
+
+          upsertSuccess = true;
+          console.log(`[SUPABASE SYNC] Berhasil sinkronisasi via fallback (${toUpdate.length} updated, ${toInsert.length} inserted).`);
+        } catch (fallbackErr: any) {
+          console.error('[SUPABASE SYNC] Fallback sync exception:', fallbackErr);
+          errors.push(`Supabase Fallback Exception: ${fallbackErr.message || fallbackErr}`);
+        }
+      }
+    }
+  } catch (err: any) {
+    console.error('[SUPABASE SYNC] Batch sync error:', err);
+    errors.push(`Supabase Batch Sync: ${err.message || err}`);
+  }
+
+  return { success: errors.length === 0, errors };
+}
+
 export async function getDb(): Promise<Database> {
   if (dbInstance) return dbInstance;
 
@@ -625,32 +767,12 @@ async function executeBulkInsertOrUpdate(
     throw err;
   }
 
-  // If syncToSupabase requested, do chunked batch upsert to Supabase outside the SQLite transaction
+  // If syncToSupabase requested, do robust batch sync to Supabase outside the SQLite transaction
   const validRecords = records.filter((r) => !isExcludedJudgement(r.judgement_qpi));
   if (syncToSupabase && isSupabaseConfigured() && validRecords.length > 0) {
-    const sb = getSupabaseClient();
-    if (sb) {
-      try {
-        const cols = await getSupabaseColumns();
-        const payload = validRecords.map((r) => {
-          const days = calculateDaysElapsed(r.request_date, r.shipped_date);
-          const isOverdue = days > 30 && r.tracking_status !== 'Delivered' && r.tracking_status !== 'Sent to HMMI';
-          const { id: _id, ...rest } = r;
-          return filterRecordForSupabase({
-            ...rest,
-            days_elapsed: days,
-            is_overdue: isOverdue,
-            updated_at: new Date().toISOString(),
-          }, cols);
-        });
-
-        for (let i = 0; i < payload.length; i += 100) {
-          const chunk = payload.slice(i, i + 100);
-          await sb.from('opf_records').upsert(chunk, { onConflict: 'dtr_number,part_name' });
-        }
-      } catch (sbErr) {
-        console.warn('[SUPABASE] Batch upsert error:', sbErr);
-      }
+    const sbResult = await syncBatchToSupabase(validRecords);
+    if (!sbResult.success) {
+      errors.push(...sbResult.errors);
     }
   }
 

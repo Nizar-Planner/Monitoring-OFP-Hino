@@ -14,77 +14,122 @@
         var origError = console.error;
         console.error = function() {
           var msg = arguments[0] ? String(arguments[0]) : '';
-          if (msg.includes('[vite]') || msg.includes('WebSocket') || msg.includes('failed to connect') || msg.includes('24678')) return;
+          if (msg.includes('[vite]') || msg.includes('WebSocket') || msg.includes('failed to connect') || msg.includes('24678') || msg.includes('binaryType')) return;
           origError.apply(console, arguments);
         };
         var origWarn = console.warn;
         console.warn = function() {
           var msg = arguments[0] ? String(arguments[0]) : '';
-          if (msg.includes('[vite]') || msg.includes('WebSocket') || msg.includes('failed to connect') || msg.includes('24678')) return;
+          if (msg.includes('[vite]') || msg.includes('WebSocket') || msg.includes('failed to connect') || msg.includes('24678') || msg.includes('binaryType')) return;
           origWarn.apply(console, arguments);
         };
         window.addEventListener('error', function (event) {
+          var msg = String((event && (event.message || event.error)) || '');
           if (
-            event.message &&
-            (event.message.includes('WebSocket') ||
-             event.message.includes('createWebSocketModuleRunnerTransport') ||
-             event.message.includes('failed to connect') ||
-             (event.filename && event.filename.includes('@vite/client')))
+            msg.includes('WebSocket') ||
+            msg.includes('binaryType') ||
+            msg.includes('createWebSocketModuleRunnerTransport') ||
+            msg.includes('failed to connect') ||
+            (event.filename && event.filename.includes('@vite/client'))
           ) {
             event.stopImmediatePropagation();
             event.preventDefault();
+            return true;
           }
         }, true);
         window.addEventListener('unhandledrejection', function (event) {
-          var str = String((event.reason && (event.reason.stack || event.reason)) || '');
+          var str = String((event && event.reason && (event.reason.stack || event.reason.message || event.reason)) || '');
           if (
             str.includes('WebSocket') ||
+            str.includes('binaryType') ||
             str.includes('@vite/client') ||
             str.includes('createWebSocketModuleRunnerTransport')
           ) {
             event.stopImmediatePropagation();
             event.preventDefault();
+            return true;
           }
         }, true);
 
         var NativeWS = window.WebSocket;
-        if (!NativeWS) return;
-        function MockHmrWebSocket(url, protocols) {
-          if (protocols === 'vite-hmr' || (typeof url === 'string' && (url.includes('token=') || url.includes('24678') || url.includes('vite')))) {
-            this.readyState = 1;
-            this.OPEN = 1;
-            this.CONNECTING = 0;
-            this.CLOSING = 2;
-            this.CLOSED = 3;
-            this.binaryType = 'blob';
-            this.bufferedAmount = 0;
-            this.extensions = '';
-            this.protocol = 'vite-hmr';
-            this.url = url;
-            this.send = function() {};
-            this.close = function() {};
-            this.addEventListener = function(type, listener) {
-              if (type === 'open') {
-                setTimeout(function() {
-                  try {
-                    if (typeof listener === 'function') listener({ type: 'open' });
-                    else if (listener && typeof listener.handleEvent === 'function') listener.handleEvent({ type: 'open' });
-                  } catch(e) {}
-                }, 0);
+
+        class MockHmrWebSocket extends EventTarget {
+          constructor(url, protocols) {
+            super();
+            this._url = String(url || '');
+            this._protocol = typeof protocols === 'string' ? protocols : (protocols && protocols[0]) || '';
+            this._readyState = 1;
+            this._binaryType = 'arraybuffer';
+            this.onopen = null;
+            this.onmessage = null;
+            this.onerror = null;
+            this.onclose = null;
+
+            setTimeout(() => {
+              if (this._readyState === 1) {
+                var ev = new Event('open');
+                if (typeof this.onopen === 'function') {
+                  try { this.onopen(ev); } catch(_) {}
+                }
+                this.dispatchEvent(ev);
               }
-            };
-            this.removeEventListener = function() {};
-            this.dispatchEvent = function() { return true; };
-            return this;
+            }, 10);
           }
-          return new NativeWS(url, protocols);
+
+          get binaryType() { return this._binaryType; }
+          set binaryType(val) { this._binaryType = val; }
+
+          get readyState() { return this._readyState; }
+          get url() { return this._url; }
+          get protocol() { return this._protocol; }
+          get extensions() { return ''; }
+          get bufferedAmount() { return 0; }
+
+          send(data) {}
+          close(code, reason) {
+            this._readyState = 3;
+            var ev = new Event('close');
+            try {
+              Object.defineProperty(ev, 'code', { value: code || 1000 });
+              Object.defineProperty(ev, 'reason', { value: reason || '' });
+              Object.defineProperty(ev, 'wasClean', { value: true });
+            } catch(_) {}
+            if (typeof this.onclose === 'function') {
+              try { this.onclose(ev); } catch(_) {}
+            }
+            this.dispatchEvent(ev);
+          }
         }
-        MockHmrWebSocket.prototype = NativeWS.prototype;
+
         MockHmrWebSocket.CONNECTING = 0;
         MockHmrWebSocket.OPEN = 1;
         MockHmrWebSocket.CLOSING = 2;
         MockHmrWebSocket.CLOSED = 3;
-        window.WebSocket = MockHmrWebSocket;
+
+        function WebSocketProxy(url, protocols) {
+          if (
+            protocols === 'vite-hmr' ||
+            (typeof url === 'string' && (url.includes('token=') || url.includes('24678') || url.includes('vite')))
+          ) {
+            return new MockHmrWebSocket(url, protocols);
+          }
+          if (NativeWS) {
+            try {
+              return new NativeWS(url, protocols);
+            } catch (e) {
+              return new MockHmrWebSocket(url, protocols);
+            }
+          }
+          return new MockHmrWebSocket(url, protocols);
+        }
+
+        WebSocketProxy.prototype = MockHmrWebSocket.prototype;
+        WebSocketProxy.CONNECTING = 0;
+        WebSocketProxy.OPEN = 1;
+        WebSocketProxy.CLOSING = 2;
+        WebSocketProxy.CLOSED = 3;
+
+        window.WebSocket = WebSocketProxy;
       })();
     </script>
   </head>

@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import { OpfRecord, ExcelImportResult } from '../types.js';
-import { bulkInsertOrUpdateOpf } from './db.js';
+import { bulkInsertOrUpdateOpf, syncBatchToSupabase } from './db.js';
 import {
   extractOpfRecordsFromSheet,
   normalizeKey,
@@ -45,21 +45,13 @@ export async function parseAndImportExcel(buffer: Buffer): Promise<ExcelImportRe
 
   const supabaseErrors: string[] = [];
 
-  // 1. SIMPAN LANGSUNG KE SUPABASE (Single Source of Truth)
+  // 1. SIMPAN LANGSUNG KE SUPABASE (Single Source of Truth) via robust batch sync
   if (isSupabaseConfigured() && supabase) {
     try {
       console.log(`[EXCEL -> SUPABASE] Mengirim ${records.length} data ke Supabase...`);
-      
-      // Bersihkan object agar sesuai dengan skema kolom Supabase (tanpa ID auto-increment lokal)
-      const payload = records.map(({ id, ...rest }) => rest);
-
-      const { data, error } = await supabase
-        .from('opf_records')
-        .upsert(payload, { onConflict: 'dtr_number,part_name' }); // Composite Key (dtr_number, part_name)
-
-      if (error) {
-        console.error('[EXCEL -> SUPABASE] Error upsert Supabase:', error.message);
-        supabaseErrors.push(`Supabase Error: ${error.message}`);
+      const sbResult = await syncBatchToSupabase(records);
+      if (!sbResult.success) {
+        supabaseErrors.push(...sbResult.errors);
       } else {
         console.log('[EXCEL -> SUPABASE] Berhasil menyinkronkan data ke Supabase.');
       }
@@ -69,8 +61,8 @@ export async function parseAndImportExcel(buffer: Buffer): Promise<ExcelImportRe
     }
   }
 
-  // 2. PERBARUI SQLITE LOKAL (sebagai cache sementara)
-  const dbResult = await bulkInsertOrUpdateOpf(records);
+  // 2. PERBARUI SQLITE LOKAL (sebagai cache sementara, tanpa duplicate sync ke Supabase)
+  const dbResult = await bulkInsertOrUpdateOpf(records, { syncToSupabase: false });
 
   return {
     totalRowsProcessed: dbResult.totalRowsProcessed,

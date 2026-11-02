@@ -3,7 +3,7 @@
 Jika Render.com meminta verifikasi kartu kredit, **Hugging Face Spaces** adalah alternatif terbaik di dunia saat ini:
 - ✅ **100% GRATIS SELAMANYA**
 - ❌ **TIDAK BUTUH KARTU KREDIT SAMA SEKALI** (Cukup daftar dengan Email)
-- 🚀 **RAM 16 GB Gratis** (Jauh lebih besar dibanding Render yang hanya 512 MB, robot penarik data HIS berjalan super kencang!)
+- 🚀 **RAM 16 GB Gratis** (Jauh lebih besar dibanding Render yang hanya 512 MB)
 
 ---
 
@@ -23,15 +23,13 @@ Buka [huggingface.co/join](https://huggingface.co/join) lalu daftar gratis mengg
 3. Klik tombol **"Create Space"**.
 
 #### 3. Masukkan Kode dari GitHub
-- Jika kode Anda sudah ada di GitHub: Di halaman Space baru Anda, klik tab **Files** &rarr; Anda bisa upload file atau hubungkan dengan GitHub repo Anda.
+- Di halaman Space baru Anda, klik tab **Files** &rarr; upload file atau hubungkan dengan repository GitHub Anda.
 
-#### 4. Masukkan Username & Password HIS
+#### 4. Konfigurasi Environment Variables (Supabase)
 1. Di halaman Space Anda, klik tab **"Settings"** di kanan atas.
 2. Gulir ke bawah ke bagian **"Variables and secrets"**.
-3. Klik **"New secret"**:
-   - Name: `HIS_USER`
-   - Value: `tws.tech` (username HIS Anda)
-4. Klik **"New secret"** lagi:
-   - Name: `HIS_PASSWORD`
-   - Value: `password_his_anda`
-5. Selesai! Hugging Face akan otomatis mem-build Docker dan menampilkan website Anda secara langsung di alamat `https://username-hino-opf-monitoring.hf.space`.
+3. Tambahkan variables dari Supabase:
+   - `VITE_SUPABASE_URL`: URL project Supabase Anda
+   - `VITE_SUPABASE_ANON_KEY`: Anon Public Key Supabase
+   - `SUPABASE_STORAGE_BUCKET`: `opf-attachments`
+4. Selesai! Hugging Face akan otomatis mem-build Docker dan menampilkan website Anda secara langsung di alamat `https://username-hino-opf-monitoring.hf.space`.

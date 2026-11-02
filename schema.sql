@@ -69,6 +69,9 @@ ALTER TABLE public.opf_records ADD COLUMN IF NOT EXISTS occurred_date DATE DEFAU
 ALTER TABLE public.opf_records ADD COLUMN IF NOT EXISTS repair_date DATE DEFAULT NULL;
 
 -- 2. Unique Index untuk Mendukung Operasi UPSERT (Anti-Duplikasi TR/DTR & Part)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_opf_dtr_part 
+ON public.opf_records (dtr_number, part_name);
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_opf_dtr_part_composite 
 ON public.opf_records (dtr_number, part_name, part_number);
 
